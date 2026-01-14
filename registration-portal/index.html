@@ -335,9 +335,15 @@
           .eq('status', 'setup')
           .order('date', { ascending: true });
 
-        if (error) throw error;
+        console.log('Tournaments query result:', { data, error });
+
+        if (error) {
+          console.error('Error loading tournaments:', error);
+          throw error;
+        }
 
         if (!data || data.length === 0) {
+          console.log('No tournaments found');
           listEl.innerHTML = '';
           emptyEl.classList.remove('hidden');
           return;
