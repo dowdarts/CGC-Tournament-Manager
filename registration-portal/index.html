@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tournament Registration Portal</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #fff;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding: 30px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+    }
+
+    .header h1 {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      font-size: 20px;
+      opacity: 0.9;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.95);
+      color: #1e293b;
+      border-radius: 20px;
+      padding: 30px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .tournament-list {
+      display: grid;
+      gap: 15px;
+    }
+
+    .tournament-item {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 25px;
+      border-radius: 15px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      border: none;
+      text-align: left;
+      width: 100%;
+      font-size: 16px;
+    }
+
+    .tournament-item:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+    }
+
+    .tournament-item h3 {
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+
+    .tournament-item .meta {
+      opacity: 0.9;
+      font-size: 16px;
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-size: 18px;
+      color: #334155;
+    }
+
+    .input {
+      width: 100%;
+      padding: 15px;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 18px;
+      transition: border-color 0.2s;
+    }
+
+    .input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .button {
+      width: 100%;
+      padding: 18px;
+      font-size: 20px;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .button-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .button-secondary {
+      background: #64748b;
+      color: white;
+      margin-top: 10px;
+    }
+
+    .button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    }
+
+    .button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .alert {
+      padding: 15px 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      font-size: 16px;
+    }
+
+    .alert-success {
+      background: #10b981;
+      color: white;
+    }
+
+    .alert-error {
+      background: #ef4444;
+      color: white;
+    }
+
+    .alert-info {
+      background: #3b82f6;
+      color: white;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 60px;
+      font-size: 20px;
+    }
+
+    .section-divider {
+      border-top: 2px solid #e2e8f0;
+      margin: 30px 0;
+      padding-top: 30px;
+    }
+
+    .back-button {
+      margin-bottom: 20px;
+    }
+
+    .player-section h4 {
+      font-size: 22px;
+      margin-bottom: 15px;
+      color: #334155;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #64748b;
+    }
+
+    .empty-state h3 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎯 Tournament Registration</h1>
+      <p id="header-subtitle">Select Your Event</p>
+    </div>
+
+    <!-- Events Lobby -->
+    <div id="lobby-view" class="card">
+      <h2 style="margin-bottom: 20px; font-size: 32px;">Active Tournaments</h2>
+      <div id="tournament-list" class="tournament-list"></div>
+      <div id="empty-state" class="empty-state hidden">
+        <h3>No Active Tournaments</h3>
+        <p>Please check back later or contact the tournament organizer</p>
+      </div>
+    </div>
+
+    <!-- Registration Form -->
+    <div id="registration-view" class="hidden">
+      <button onclick="backToLobby()" class="button button-secondary back-button">
+        ← Back to Tournament List
+      </button>
+
+      <div class="card">
+        <div id="success-message" class="alert alert-success hidden">
+          ✅ Registration successful! Good luck!
+        </div>
+        <div id="error-message" class="alert alert-error hidden"></div>
+
+        <form id="registration-form">
+          <!-- Player 1 -->
+          <div class="player-section">
+            <h4>
+              <span id="player1-icon">👤</span>
+              <span id="player1-label">Your Details</span>
+            </h4>
+            
+            <div class="form-group">
+              <label class="form-label">Full Name *</label>
+              <input 
+                type="text" 
+                id="player1-name" 
+                class="input" 
+                placeholder="Enter your name"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Email (optional - for notifications)</label>
+              <input 
+                type="email" 
+                id="player1-email" 
+                class="input" 
+                placeholder="your.email@example.com"
+              />
+            </div>
+          </div>
+
+          <!-- Player 2 (Doubles) -->
+          <div id="player2-section" class="section-divider hidden">
+            <div class="player-section">
+              <h4>
+                <span>👥</span>
+                Player 2 (Your Partner)
+              </h4>
+              
+              <div class="form-group">
+                <label class="form-label">Full Name *</label>
+                <input 
+                  type="text" 
+                  id="player2-name" 
+                  class="input" 
+                  placeholder="Enter partner's name"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Email (optional)</label>
+                <input 
+                  type="email" 
+                  id="player2-email" 
+                  class="input" 
+                  placeholder="partner.email@example.com"
+                />
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="button button-primary" id="submit-button">
+            Register
+          </button>
+        </form>
+
+        <p style="text-align: center; margin-top: 20px; color: #64748b; font-size: 14px;">
+          Having trouble? Please see the tournament desk
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Configuration - UPDATE THESE VALUES
+    const SUPABASE_URL = 'https://pfujbgwgsxuhgvmeatjh.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_noZX7_xCvPZSqbQGfDsFMg_wRsuvLyB';
+    
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    let selectedTournament = null;
+
+    // Load active tournaments
+    async function loadTournaments() {
+      const listEl = document.getElementById('tournament-list');
+      const emptyEl = document.getElementById('empty-state');
+      
+      listEl.innerHTML = '<div class="loading">Loading tournaments...</div>';
+      
+      try {
+        const { data, error } = await supabase
+          .from('tournaments')
+          .select('*')
+          .eq('registration_enabled', true)
+          .eq('status', 'setup')
+          .order('date', { ascending: true });
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+          listEl.innerHTML = '';
+          emptyEl.classList.remove('hidden');
+          return;
+        }
+
+        emptyEl.classList.add('hidden');
+        listEl.innerHTML = data.map(tournament => `
+          <button class="tournament-item" onclick="selectTournament('${tournament.id}')">
+            <h3>${tournament.name}</h3>
+            <div class="meta">
+              <span>📅 ${formatDate(tournament.date)}</span>
+              <span>📍 ${tournament.location || 'TBD'}</span>
+              <span>${tournament.game_type === 'doubles' ? '👥 Doubles' : '👤 Singles'}</span>
+            </div>
+          </button>
+        `).join('');
+      } catch (err) {
+        console.error('Error loading tournaments:', err);
+        listEl.innerHTML = '<div class="alert alert-error">Failed to load tournaments. Please refresh the page.</div>';
+      }
+    }
+
+    // Select a tournament
+    async function selectTournament(tournamentId) {
+      try {
+        const { data, error } = await supabase
+          .from('tournaments')
+          .select('*')
+          .eq('id', tournamentId)
+          .single();
+
+        if (error) throw error;
+
+        selectedTournament = data;
+        showRegistrationForm();
+      } catch (err) {
+        console.error('Error loading tournament:', err);
+        alert('Failed to load tournament details');
+      }
+    }
+
+    // Show registration form
+    function showRegistrationForm() {
+      document.getElementById('lobby-view').classList.add('hidden');
+      document.getElementById('registration-view').classList.remove('hidden');
+      document.getElementById('header-subtitle').textContent = selectedTournament.name;
+
+      // Configure form for singles/doubles
+      const isDoubles = selectedTournament.game_type === 'doubles';
+      const player2Section = document.getElementById('player2-section');
+      const player2Name = document.getElementById('player2-name');
+      const submitButton = document.getElementById('submit-button');
+
+      if (isDoubles) {
+        player2Section.classList.remove('hidden');
+        player2Name.required = true;
+        document.getElementById('player1-label').textContent = 'Player 1';
+        submitButton.textContent = 'Register Team';
+      } else {
+        player2Section.classList.add('hidden');
+        player2Name.required = false;
+        document.getElementById('player1-label').textContent = 'Your Details';
+        submitButton.textContent = 'Register';
+      }
+
+      // Reset form
+      document.getElementById('registration-form').reset();
+      hideMessages();
+    }
+
+    // Back to lobby
+    function backToLobby() {
+      document.getElementById('lobby-view').classList.remove('hidden');
+      document.getElementById('registration-view').classList.add('hidden');
+      document.getElementById('header-subtitle').textContent = 'Select Your Event';
+      selectedTournament = null;
+    }
+
+    // Handle registration
+    document.getElementById('registration-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const player1Name = document.getElementById('player1-name').value.trim();
+      const player1Email = document.getElementById('player1-email').value.trim();
+      const player2Name = document.getElementById('player2-name').value.trim();
+      const player2Email = document.getElementById('player2-email').value.trim();
+      const submitButton = document.getElementById('submit-button');
+
+      if (!player1Name) return;
+
+      const isDoubles = selectedTournament.game_type === 'doubles';
+      if (isDoubles && !player2Name) {
+        showError('Please enter both team members');
+        return;
+      }
+
+      submitButton.disabled = true;
+      submitButton.textContent = 'Registering...';
+      hideMessages();
+
+      try {
+        const teamId = isDoubles ? crypto.randomUUID() : null;
+
+        const players = [{
+          tournament_id: selectedTournament.id,
+          name: player1Name,
+          email: player1Email || null,
+          paid: false,
+          team_id: teamId
+        }];
+
+        if (isDoubles) {
+          players.push({
+            tournament_id: selectedTournament.id,
+            name: player2Name,
+            email: player2Email || null,
+            paid: false,
+            team_id: teamId
+          });
+        }
+
+        const { error } = await supabase
+          .from('players')
+          .insert(players);
+
+        if (error) throw error;
+
+        // Success!
+        showSuccess();
+        document.getElementById('registration-form').reset();
+        
+        // Auto-hide success message and scroll to top
+        setTimeout(() => {
+          hideMessages();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 3000);
+
+      } catch (err) {
+        console.error('Registration error:', err);
+        showError('Registration failed. Please try again or see the tournament desk.');
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = isDoubles ? 'Register Team' : 'Register';
+      }
+    });
+
+    // Helper functions
+    function formatDate(dateStr) {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', { 
+        weekday: 'short', 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    }
+
+    function showSuccess() {
+      document.getElementById('success-message').classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function showError(message) {
+      const errorEl = document.getElementById('error-message');
+      errorEl.textContent = message;
+      errorEl.classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function hideMessages() {
+      document.getElementById('success-message').classList.add('hidden');
+      document.getElementById('error-message').classList.add('hidden');
+    }
+
+    // Load tournaments on page load
+    loadTournaments();
+
+    // Auto-refresh tournament list every 30 seconds
+    setInterval(loadTournaments, 30000);
+  </script>
+</body>
+</html>
