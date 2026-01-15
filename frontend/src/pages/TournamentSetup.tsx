@@ -7,7 +7,7 @@ import GroupConfiguration from '@/components/GroupConfiguration';
 import { useTournamentStore } from '@/store/tournament';
 import { TournamentService, PlayerService, GroupService } from '@/services/api';
 import { Tournament, Player } from '@/types';
-import { ExternalLink, Copy, Check } from 'lucide-react';
+import { ExternalLink, Copy, Check, RefreshCw, WifiOff, Wifi } from 'lucide-react';
 import supabase from '@/services/supabase';
 
 const TournamentSetup: React.FC = () => {
@@ -88,6 +88,32 @@ const TournamentSetup: React.FC = () => {
       supabase.removeChannel(channel);
     };
   }, [id, store]);
+
+  // Auto-refresh registrations every 5 seconds when registration is online
+  useEffect(() => {
+    if (!tournament?.id || !tournament.registration_enabled) return;
+
+    const refreshPlayers = async () => {
+      try {
+        const players = await PlayerService.getPlayers(tournament.id);
+        store.setPlayers(players);
+        console.log(`Auto-refreshed: ${players.length} players found`);
+      } catch (err) {
+        console.error('Auto-refresh failed:', err);
+      }
+    };
+
+    // Initial load
+    refreshPlayers();
+
+    // Set up interval for auto-refresh
+    const intervalId = setInterval(refreshPlayers, 5000);
+
+    // Cleanup interval on unmount or when registration is disabled
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [tournament?.id, tournament?.registration_enabled, store]);
 
   const loadTournament = async (tournamentId: string) => {
     try {
@@ -190,6 +216,25 @@ const TournamentSetup: React.FC = () => {
     }
   };
 
+  const handleToggleRegistration = async () => {
+    if (!tournament) return;
+    
+    try {
+      setLoading(true);
+      const updated = await TournamentService.updateTournament(tournament.id, {
+        registration_enabled: !tournament.registration_enabled
+      });
+      setTournament(updated);
+      store.setCurrentTournament(updated);
+      alert(updated.registration_enabled ? '✅ Registration is now ONLINE' : '🔴 Registration is now OFFLINE');
+    } catch (err) {
+      alert('Failed to toggle registration');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!tournament) {
     return <TournamentForm onSubmit={handleCreateTournament} isLoading={loading} />;
   }
@@ -218,7 +263,7 @@ const TournamentSetup: React.FC = () => {
           Self-Service Registration Portal
         </h3>
         <p style={{ marginBottom: '15px', color: '#94a3b8' }}>
-          Share this link with players so they can register themselves on a tablet at the registration desk
+          Share this link for online registration. Players appear in the check-in list below. Mark as "Paid" to add to confirmed roster.
         </p>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           <input 
@@ -268,17 +313,76 @@ const TournamentSetup: React.FC = () => {
             isLoading={loading}
           />
           
+          {/* Control Buttons */}
+          <div className="card" style={{ marginBottom: '20px', backgroundColor: '#1e293b' }}>
+            <div style={{ display: 'flex', gap: '20px', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '16px', fontWeight: 600 }}>Registration is:</span>
+                <span style={{ 
+                  fontSize: '18px', 
+                  fontWeight: 700, 
+                  color: tournament.registration_enabled ? '#10b981' : '#ef4444',
+                  textTransform: 'uppercase'
+                }}>
+                  {tournament.registration_enabled ? 'OPEN' : 'CLOSED'}
+                </span>
+              </div>
+              
+              <button
+                onClick={handleToggleRegistration}
+                className={`button ${tournament.registration_enabled ? 'button-danger' : 'button-primary'}`}
+                disabled={loading}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                {tournament.registration_enabled ? (
+                  <>
+                    <WifiOff size={16} />
+                    Close Registration
+                  </>
+                ) : (
+                  <>
+                    <Wifi size={16} />
+                    Open Registration
+                  </>
+                )}
+              </button>
+            </div>
+            {tournament.registration_enabled && (
+              <p style={{ marginTop: '15px', fontSize: '14px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <RefreshCw size={14} className="spinning" />
+                Auto-refreshing check-in list every 5 seconds - New players will appear automatically
+              </p>
+            )}
+          </div>
+          
+          {/* Check-In List - Unpaid Players Only - Yellow Highlight */}
+          <div style={{ border: '3px solid #fbbf24', borderRadius: '12px', padding: '15px', backgroundColor: 'rgba(251, 191, 36, 0.05)', marginBottom: '20px' }}>
+            <PlayerList 
+              players={store.players}
+              onUpdatePlayer={handleUpdatePlayer}
+              onDeletePlayer={handleDeletePlayer}
+              isLoading={loading}
+              title="Check-In List (Unpaid)"
+              showPaidOnly={false}
+              emptyMessage="No unpaid registrations. All players have been marked as paid!"
+            />
+          </div>
+
+          {/* Master Registration List - Paid Players Only */}
           <PlayerList 
             players={store.players}
             onUpdatePlayer={handleUpdatePlayer}
             onDeletePlayer={handleDeletePlayer}
             isLoading={loading}
+            title="✅ Master Registration List (Confirmed & Paid)"
+            showPaidOnly={true}
+            emptyMessage="No confirmed players yet. Mark players as paid in the check-in list to add them here."
           />
 
-          {store.players.length > 0 && (tournament.format === 'group-knockout' || tournament.format === 'round-robin') && (
+          {store.players.filter(p => p.paid).length > 0 && (tournament.format === 'group-knockout' || tournament.format === 'round-robin') && (
             <GroupConfiguration
               tournament={tournament}
-              players={store.players}
+              players={store.players.filter(p => p.paid)}
               onSaveConfiguration={handleSaveGroupConfiguration}
             />
           )}

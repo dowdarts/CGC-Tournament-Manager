@@ -48,6 +48,19 @@
   padding: 30px 0;
 }
 
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
 .grid {
   display: grid;
   gap: 20px;

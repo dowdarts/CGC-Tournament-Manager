@@ -25,9 +25,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               >
                 <Menu size={24} />
               </button>
-              <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold' }}>
-                🎯 Dart Tournament Manager
-              </h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <img src="/Tournament manager logo.png" alt="Tournament Manager" style={{ height: '36px', width: 'auto' }} />
+                <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold' }}>
+                  Dart Tournament Manager
+                </h1>
+              </div>
             </div>
             <nav>
               <ul className="nav-menu">

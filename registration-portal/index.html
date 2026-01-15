@@ -33,6 +33,12 @@
       backdrop-filter: blur(10px);
     }
 
+    .header img {
+      height: 80px;
+      width: auto;
+      margin-bottom: 15px;
+    }
+
     .header h1 {
       font-size: 48px;
       margin-bottom: 10px;
@@ -213,6 +219,7 @@
 <body>
   <div class="container">
     <div class="header">
+      <img src="../registration-portal-logo.png" alt="Registration Portal" />
       <h1>🎯 Tournament Registration</h1>
       <p id="header-subtitle">Select Your Event</p>
     </div>
@@ -441,10 +448,48 @@
       }
 
       submitButton.disabled = true;
-      submitButton.textContent = 'Registering...';
+      submitButton.textContent = 'Checking...';
       hideMessages();
 
       try {
+        // Check for duplicate registrations
+        const checkDuplicate = async (name, email) => {
+          let query = supabaseClient
+            .from('players')
+            .select('id')
+            .eq('tournament_id', selectedTournament.id)
+            .eq('name', name);
+          
+          if (email) {
+            query = query.eq('email', email);
+          }
+          
+          const { data, error } = await query;
+          return data && data.length > 0;
+        };
+
+        // Check player 1
+        const player1Exists = await checkDuplicate(player1Name, player1Email);
+        if (player1Exists) {
+          showError(`${player1Name} is already registered for this tournament!`);
+          submitButton.disabled = false;
+          submitButton.textContent = isDoubles ? 'Register Team' : 'Register';
+          return;
+        }
+
+        // Check player 2 if doubles
+        if (isDoubles) {
+          const player2Exists = await checkDuplicate(player2Name, player2Email);
+          if (player2Exists) {
+            showError(`${player2Name} is already registered for this tournament!`);
+            submitButton.disabled = false;
+            submitButton.textContent = 'Register Team';
+            return;
+          }
+        }
+
+        submitButton.textContent = 'Registering...';
+
         const teamId = isDoubles ? crypto.randomUUID() : null;
 
         const players = [{
@@ -465,17 +510,15 @@
           });
         }
 
-        const { error } = await supabase
+        const { error } = await supabaseClient
           .from('players')
           .insert(players);
 
         if (error) throw error;
 
-        // Success!
         showSuccess();
         document.getElementById('registration-form').reset();
         
-        // Auto-hide success message and scroll to top
         setTimeout(() => {
           hideMessages();
           window.scrollTo({ top: 0, behavior: 'smooth' });

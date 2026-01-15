@@ -7,13 +7,19 @@ interface PlayerListProps {
   onUpdatePlayer: (player: Player) => void;
   onDeletePlayer: (playerId: string) => void;
   isLoading?: boolean;
+  title?: string;
+  showPaidOnly?: boolean;
+  emptyMessage?: string;
 }
 
 const PlayerList: React.FC<PlayerListProps> = ({ 
   players, 
   onUpdatePlayer, 
   onDeletePlayer, 
-  isLoading = false 
+  isLoading = false,
+  title = 'Check-In List',
+  showPaidOnly = false,
+  emptyMessage = 'No players yet.'
 }) => {
   const handleTogglePaid = (player: Player) => {
     onUpdatePlayer({
@@ -22,17 +28,21 @@ const PlayerList: React.FC<PlayerListProps> = ({
     });
   };
 
-  if (players.length === 0) {
+  const filteredPlayers = showPaidOnly 
+    ? players.filter(p => p.paid)
+    : players.filter(p => !p.paid);
+
+  if (filteredPlayers.length === 0) {
     return (
       <div className="alert alert-info">
-        No players yet. Add your first player above!
+        {emptyMessage}
       </div>
     );
   }
 
   return (
     <div className="card">
-      <h3 style={{ marginBottom: '15px' }}>Players ({players.length})</h3>
+      <h3 style={{ marginBottom: '15px' }}>{title} ({filteredPlayers.length})</h3>
       <table className="table">
         <thead>
           <tr>
@@ -43,7 +53,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
           </tr>
         </thead>
         <tbody>
-          {players.map((player) => (
+          {filteredPlayers.map((player) => (
             <tr key={player.id}>
               <td style={{ fontWeight: 500 }}>{player.name}</td>
               <td style={{ color: '#94a3b8', fontSize: '14px' }}>

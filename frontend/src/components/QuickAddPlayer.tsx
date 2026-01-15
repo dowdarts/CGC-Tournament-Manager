@@ -28,7 +28,10 @@ const QuickAddPlayer: React.FC<QuickAddPlayerProps> = ({ tournamentId, onAddPlay
 
   return (
     <form onSubmit={handleSubmit} className="card" style={{ marginBottom: '20px' }}>
-      <h3 style={{ marginBottom: '15px' }}>Quick Add Player</h3>
+      <h3 style={{ marginBottom: '10px' }}>Manual Check-In</h3>
+      <p style={{ marginBottom: '15px', fontSize: '14px', color: '#64748b' }}>
+        Add players manually. Mark as "Paid" to add them to the confirmed roster.
+      </p>
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: '10px' }}>
         <div className="form-group" style={{ marginBottom: 0 }}>
           <input
