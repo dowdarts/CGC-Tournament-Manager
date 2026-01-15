@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { TournamentService, PlayerService, GroupService, MatchService } from '@/services/api';
+import { supabase } from '@/services/supabase';
 import { Tournament, Player, Group, Match } from '@/types';
 import { Trophy, Users } from 'lucide-react';
 
@@ -229,38 +230,74 @@ const GroupStage: React.FC = () => {
     return matches;
   };
 
-  const createKnockoutBracket = () => {
-    // Get advancing players from each group based on advancement counts
-    const advancingPlayersByGroup: { [groupLetter: string]: Player[] } = {};
+  const createKnockoutBracket = async () => {
+    if (!id || !tournament) return;
     
-    groupMatchData.forEach(groupData => {
-      const advancingCount = advancementCounts[groupData.groupId] || 2;
-      // Take the top N players based on standings, regardless of isAdvancing flag
-      const advancingPlayers = groupData.standings
-        .slice(0, advancingCount)
-        .map(standing => standing.player);
-      
-      advancingPlayersByGroup[groupData.groupLetter] = advancingPlayers;
-      
-      // Debug logging
-      console.log(`Group ${groupData.groupLetter}: ${advancingPlayers.length} players advancing:`, 
-        advancingPlayers.map(p => p.name));
-    });
-    
-    console.log('All advancing players by group:', advancingPlayersByGroup);
-    
-    const firstRoundMatches = generateKnockoutBracket(advancingPlayersByGroup);
-    
-    // Generate complete bracket structure with all rounds
-    const totalPlayers = firstRoundMatches.length * 2;
-    const fullBracket = generateFullBracketStructure(firstRoundMatches, totalPlayers);
-    
-    setKnockoutBracket(fullBracket);
-    setKnockoutGenerated(true);
-    setShowKnockoutSetup(false);
-    
-    // Save to localStorage for the Knockout Bracket tab to access
     try {
+      setStarting(true);
+      
+      // Get advancing players from each group based on advancement counts
+      const advancingPlayersByGroup: { [groupLetter: string]: Player[] } = {};
+      
+      groupMatchData.forEach(groupData => {
+        const advancingCount = advancementCounts[groupData.groupId] || 2;
+        // Take the top N players based on standings, regardless of isAdvancing flag
+        const advancingPlayers = groupData.standings
+          .slice(0, advancingCount)
+          .map(standing => standing.player);
+        
+        advancingPlayersByGroup[groupData.groupLetter] = advancingPlayers;
+        
+        // Debug logging
+        console.log(`Group ${groupData.groupLetter}: ${advancingPlayers.length} players advancing:`, 
+          advancingPlayers.map(p => p.name));
+      });
+      
+      console.log('All advancing players by group:', advancingPlayersByGroup);
+      
+      const firstRoundMatches = generateKnockoutBracket(advancingPlayersByGroup);
+      
+      // Generate complete bracket structure with all rounds
+      const totalPlayers = firstRoundMatches.length * 2;
+      const fullBracket = generateFullBracketStructure(firstRoundMatches, totalPlayers);
+      
+      // Save matches to database
+      const matchesToCreate = fullBracket.map((match, index) => ({
+        tournament_id: id,
+        round: index + 1,
+        board_number: match.bracket_position || (index + 1),
+        player1_id: match.player1?.id || null,
+        player2_id: match.player2?.id || null,
+        player1_score: null,
+        player2_score: null,
+        winner_id: null,
+        completed: false,
+        match_type: 'knockout',
+        round_name: match.round
+      }));
+      
+      // Create matches in database
+      const { data: createdMatches, error } = await supabase
+        .from('matches')
+        .insert(matchesToCreate)
+        .select();
+      
+      if (error) throw error;
+      
+      console.log('✅ Created knockout matches in database:', createdMatches);
+      
+      // Update tournament status
+      await TournamentService.updateTournament(id, {
+        knockout_started: true,
+        group_stage_completed: true
+      });
+      
+      setKnockoutBracket(fullBracket);
+      setKnockoutGenerated(true);
+      setShowKnockoutSetup(false);
+      setKnockoutStarted(true);
+      
+      // Save to localStorage for the Knockout Bracket tab to access
       localStorage.setItem('knockoutBracket', JSON.stringify(fullBracket));
       localStorage.setItem('knockoutBracketTimestamp', Date.now().toString());
       
@@ -279,10 +316,15 @@ const GroupStage: React.FC = () => {
       window.dispatchEvent(new Event('knockoutBracketUpdated'));
       
       console.log('✅ Knockout bracket saved successfully:', fullBracket);
-      alert(`Knockout bracket generated! ${totalPlayers} players in ${fullBracket.length} matches. Go to the Knockout Bracket tab to view.`);
+      alert(`Knockout bracket started! ${totalPlayers} players in ${fullBracket.length} matches. Go to the Knockout Bracket tab to enter scores.`);
+      
+      // Reload data to show updated tournament state
+      await loadData();
     } catch (error) {
-      console.error('❌ Error saving knockout bracket:', error);
-      alert('Knockout bracket generated but failed to save. Please try again.');
+      console.error('❌ Error creating knockout bracket:', error);
+      alert('Failed to start knockout bracket. Please try again.');
+    } finally {
+      setStarting(false);
     }
   };
 
