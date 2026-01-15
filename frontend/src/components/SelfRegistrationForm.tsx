@@ -79,7 +79,19 @@ const SelfRegistrationForm: React.FC<SelfRegistrationFormProps> = ({
   return (
     <div className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
       <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-        <h1 style={{ fontSize: '32px', marginBottom: '10px' }}>🎯 {tournamentName}</h1>
+        <img 
+          src="/Tournament manager logo.png" 
+          alt="Tournament Manager" 
+          style={{ 
+            maxWidth: '100%',
+            height: 'auto',
+            maxHeight: '150px',
+            display: 'block',
+            margin: '0 auto 20px',
+            filter: 'drop-shadow(0 4px 20px rgba(102, 126, 234, 0.4))'
+          }} 
+        />
+        <h1 style={{ fontSize: '32px', marginBottom: '10px' }}>{tournamentName}</h1>
         <p style={{ fontSize: '18px', color: '#94a3b8' }}>
           {gameType === 'singles' ? 'Player Registration' : 'Team Registration (Doubles)'}
         </p>

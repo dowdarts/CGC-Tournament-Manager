@@ -149,7 +149,7 @@ export const MatchService = {
 
 // Group API
 export const GroupService = {
-  async createGroup(data: Omit<Group, 'id' | 'createdAt'>) {
+  async createGroup(data: Omit<Group, 'id' | 'created_at'>) {
     const { data: result, error } = await supabase
       .from('groups')
       .insert([data])
@@ -165,6 +165,14 @@ export const GroupService = {
       .eq('tournament_id', tournamentId);
     if (error) throw error;
     return data || [];
+  },
+
+  async deleteGroups(tournamentId: string) {
+    const { error } = await supabase
+      .from('groups')
+      .delete()
+      .eq('tournament_id', tournamentId);
+    if (error) throw error;
   }
 };
 

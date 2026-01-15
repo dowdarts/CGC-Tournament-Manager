@@ -329,7 +329,7 @@
   <div class="container">
     <div class="header">
       <img src="registration-portal-logo.png" alt="Registration Portal" />
-      <h1>🎯 Tournament Registration</h1>
+      <h1 id="main-title">🎯 Tournament Registration</h1>
       <p id="header-subtitle">Select Your Event</p>
     </div>
 
@@ -502,7 +502,10 @@
     function showRegistrationForm() {
       document.getElementById('lobby-view').classList.add('hidden');
       document.getElementById('registration-view').classList.remove('hidden');
-      document.getElementById('header-subtitle').textContent = selectedTournament.name;
+      
+      // Update header to show only event name
+      document.getElementById('main-title').textContent = selectedTournament.name;
+      document.getElementById('header-subtitle').textContent = selectedTournament.game_type === 'doubles' ? 'Team Registration (Doubles)' : 'Player Registration';
 
       const isDoubles = selectedTournament.game_type === 'doubles';
       const player2Section = document.getElementById('player2-section');
@@ -528,6 +531,9 @@
     function backToLobby() {
       document.getElementById('lobby-view').classList.remove('hidden');
       document.getElementById('registration-view').classList.add('hidden');
+      
+      // Restore main lobby title
+      document.getElementById('main-title').textContent = '🎯 Tournament Registration';
       document.getElementById('header-subtitle').textContent = 'Select Your Event';
       selectedTournament = null;
     }

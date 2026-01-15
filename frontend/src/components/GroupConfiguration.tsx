@@ -5,54 +5,86 @@ import { Users } from 'lucide-react';
 interface GroupConfigurationProps {
   tournament: Tournament;
   players: Player[];
-  onSaveConfiguration: (config: { num_groups: number; advancement_rules: string; game_type: 'singles' | 'doubles' }) => void;
+  onAdvancementChange?: (count: number) => void;
 }
 
-const GroupConfiguration: React.FC<GroupConfigurationProps> = ({ tournament, players, onSaveConfiguration }) => {
-  const [numGroups, setNumGroups] = useState(4);
-  const [gameType, setGameType] = useState<'singles' | 'doubles'>('singles');
-  const [advancePlayers, setAdvancePlayers] = useState(2);
+const GroupConfiguration: React.FC<GroupConfigurationProps> = ({ tournament, players, onAdvancementChange }) => {
+  const [numGroups, setNumGroups] = useState(tournament.num_groups || 4);
+  
+  // Extract number from advancement_rules (e.g., "Top 2 from each group..." -> 2)
+  const getAdvancementCount = () => {
+    const match = tournament.advancement_rules?.match(/Top (\d+)/);
+    return match ? parseInt(match[1]) : 2;
+  };
+  const [advancePlayers, setAdvancePlayers] = useState(getAdvancementCount());
+  
+  // Track if config has changed
+  const [numGroupsChanged, setNumGroupsChanged] = useState(false);
+  const [advancementChanged, setAdvancementChanged] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
-  const playerCount = players.length;
+  // Notify parent when advancement count changes
+  React.useEffect(() => {
+    if (onAdvancementChange) {
+      onAdvancementChange(advancePlayers);
+    }
+  }, [advancePlayers, onAdvancementChange]);
+
+  const gameType = tournament.game_type || 'singles';
+  
+  // For doubles, count teams instead of individual players
+  const getEntityCount = () => {
+    if (gameType === 'doubles') {
+      // Group players by team_id to count teams
+      const teams = new Set<string>();
+      let soloPlayers = 0;
+      
+      players.forEach(player => {
+        if (player.team_id) {
+          teams.add(player.team_id);
+        } else {
+          soloPlayers++;
+        }
+      });
+      
+      return teams.size + soloPlayers;
+    }
+    return players.length;
+  };
+  
+  const entityCount = getEntityCount();
+  const entityLabel = gameType === 'doubles' ? 'teams' : 'players';
   const validGroupSizes = [2, 4, 8, 16, 32];
 
   // Calculate group distribution
   const calculateDistribution = () => {
-    if (playerCount === 0) return { distribution: [], playersPerGroup: 0, evenGroups: 0, extraGroup: 0 };
+    if (entityCount === 0) return { distribution: [], entitiesPerGroup: 0, groupsWithExtra: 0, groupsWithBase: 0 };
 
-    const playersPerGroup = Math.floor(playerCount / numGroups);
-    const remainder = playerCount % numGroups;
+    const entitiesPerGroup = Math.floor(entityCount / numGroups);
+    const remainder = entityCount % numGroups;
 
-    const evenGroups = numGroups - (remainder > 0 ? 1 : 0);
-    const extraGroup = remainder > 0 ? playersPerGroup + remainder : 0;
+    // Distribute remainder evenly: first 'remainder' groups get +1 entity
+    const groupsWithExtra = remainder; // Groups that get entitiesPerGroup + 1
+    const groupsWithBase = numGroups - remainder; // Groups that get entitiesPerGroup
 
     const distribution = [];
     for (let i = 0; i < numGroups; i++) {
-      if (i === numGroups - 1 && remainder > 0) {
-        distribution.push(playersPerGroup + remainder);
+      if (i < remainder) {
+        distribution.push(entitiesPerGroup + 1);
       } else {
-        distribution.push(playersPerGroup);
+        distribution.push(entitiesPerGroup);
       }
     }
 
-    return { distribution, playersPerGroup, evenGroups, extraGroup };
+    return { distribution, entitiesPerGroup, groupsWithExtra, groupsWithBase };
   };
 
   const dist = calculateDistribution();
 
-  const handleSave = () => {
-    const advancementText = `Top ${advancePlayers} from each group advance to knockout bracket`;
-    onSaveConfiguration({
-      num_groups: numGroups,
-      advancement_rules: advancementText,
-      game_type: gameType
-    });
-  };
-
-  if (playerCount === 0) {
+  if (entityCount === 0) {
     return (
       <div className="alert alert-info">
-        Add players first before configuring groups
+        Add {gameType === 'doubles' ? 'teams' : 'players'} first before configuring groups
       </div>
     );
   }
@@ -65,19 +97,7 @@ const GroupConfiguration: React.FC<GroupConfigurationProps> = ({ tournament, pla
       </h3>
 
       <div className="alert alert-info" style={{ marginBottom: '20px' }}>
-        <strong>{playerCount} players registered</strong>
-      </div>
-
-      <div className="form-group">
-        <label className="form-label">Game Type</label>
-        <select 
-          value={gameType} 
-          onChange={(e) => setGameType(e.target.value as 'singles' | 'doubles')}
-          className="input"
-        >
-          <option value="singles">Singles</option>
-          <option value="doubles">Doubles (Teams of 2)</option>
-        </select>
+        <strong>{entityCount} {entityLabel} registered</strong> {gameType === 'doubles' && `(${players.length} players total)`}
       </div>
 
       <div className="form-group">
@@ -87,37 +107,89 @@ const GroupConfiguration: React.FC<GroupConfigurationProps> = ({ tournament, pla
             <button
               key={size}
               type="button"
-              onClick={() => setNumGroups(size)}
+              onClick={() => {
+                setNumGroups(size);
+                setNumGroupsChanged(size !== tournament.num_groups);
+              }}
               className={`button ${numGroups === size ? 'button-primary' : 'button-secondary'}`}
-              disabled={size > playerCount}
+              disabled={size > entityCount}
             >
               {size} Groups
             </button>
           ))}
         </div>
+        {numGroupsChanged && (
+          <button
+            onClick={async () => {
+              setUpdating(true);
+              try {
+                const { TournamentService, GroupService, PlayerService } = await import('@/services/api');
+                
+                // Delete existing groups
+                await GroupService.deleteGroups(tournament.id);
+                
+                // Clear group_id from all players
+                for (const player of players) {
+                  await PlayerService.updatePlayer(player.id, { group_id: null });
+                }
+                
+                // Update tournament with new num_groups and mark groups as not generated
+                await TournamentService.updateTournament(tournament.id, {
+                  num_groups: numGroups,
+                  groups_generated: false
+                });
+                
+                // Reload page data to reflect changes
+                window.location.reload();
+              } catch (err) {
+                console.error('Failed to update group config:', err);
+                setUpdating(false);
+              }
+            }}
+            className="button button-warning"
+            disabled={updating}
+            style={{ marginTop: '10px', width: '100%' }}
+          >
+            {updating ? 'Updating...' : 'Update Group Config (Will Clear Existing Groups)'}
+          </button>
+        )}
+        <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '8px' }}>
+          {numGroupsChanged ? 'Click "Update Group Config" to apply changes and regenerate groups' : 'Select number of groups, then generate to create groups'}
+        </p>
       </div>
 
       <div className="card" style={{ backgroundColor: '#0f172a', padding: '15px', marginTop: '15px' }}>
-        <h4 style={{ marginBottom: '10px', fontSize: '14px', color: '#94a3b8' }}>Group Distribution:</h4>
+        <h4 style={{ marginBottom: '10px', fontSize: '14px', color: '#94a3b8' }}>Group Distribution (Balanced):</h4>
         {dist.distribution.length > 0 ? (
           <>
-            <p style={{ marginBottom: '8px' }}>
-              {dist.evenGroups > 0 && (
-                <span><strong>{dist.evenGroups}</strong> groups of <strong>{dist.playersPerGroup}</strong> players</span>
+            <p style={{ marginBottom: '8px', color: '#e2e8f0' }}>
+              {dist.groupsWithBase > 0 && (
+                <span><strong>{dist.groupsWithBase}</strong> groups of <strong>{dist.entitiesPerGroup}</strong> {entityLabel}</span>
               )}
-              {dist.extraGroup > 0 && (
+              {dist.groupsWithExtra > 0 && (
                 <span>
-                  {dist.evenGroups > 0 ? ', ' : ''}
-                  <strong>1</strong> group of <strong>{dist.extraGroup}</strong> players
+                  {dist.groupsWithBase > 0 ? ', ' : ''}
+                  <strong>{dist.groupsWithExtra}</strong> {dist.groupsWithExtra === 1 ? 'group' : 'groups'} of <strong>{dist.entitiesPerGroup + 1}</strong> {entityLabel}
                 </span>
               )}
             </p>
+            <p style={{ fontSize: '12px', color: '#60a5fa', marginBottom: '10px' }}>
+              ✓ Fair distribution: No group differs by more than 1 {entityLabel === 'teams' ? 'team' : 'player'}
+            </p>
             <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
-              {dist.distribution.map((count, idx) => (
-                <div key={idx} className="badge badge-primary">
-                  Group {idx + 1}: {count} players
-                </div>
-              ))}
+              {dist.distribution.map((count, idx) => {
+                // Convert index to letter: 0->A, 1->B, etc.
+                const groupLetter = String.fromCharCode(65 + idx);
+                return (
+                  <div key={idx} className="badge badge-primary" style={{ 
+                    padding: '8px 12px',
+                    fontSize: '14px',
+                    backgroundColor: count === dist.entitiesPerGroup + 1 ? '#667eea' : '#475569'
+                  }}>
+                    Group {groupLetter}: {count} {entityLabel}
+                  </div>
+                );
+              })}
             </div>
           </>
         ) : (
@@ -130,7 +202,11 @@ const GroupConfiguration: React.FC<GroupConfigurationProps> = ({ tournament, pla
           <label className="form-label">Players advancing from each group to bracket</label>
           <select 
             value={advancePlayers} 
-            onChange={(e) => setAdvancePlayers(parseInt(e.target.value))}
+            onChange={(e) => {
+              const value = parseInt(e.target.value);
+              setAdvancePlayers(value);
+              setAdvancementChanged(value !== getAdvancementCount());
+            }}
             className="input"
           >
             <option value="1">Top 1</option>
@@ -138,19 +214,36 @@ const GroupConfiguration: React.FC<GroupConfigurationProps> = ({ tournament, pla
             <option value="3">Top 3</option>
             <option value="4">Top 4</option>
           </select>
+          {advancementChanged && (
+            <button
+              onClick={async () => {
+                setUpdating(true);
+                try {
+                  const { TournamentService } = await import('@/services/api');
+                  await TournamentService.updateTournament(tournament.id, {
+                    advancement_rules: `Top ${advancePlayers} from each group advance to knockout bracket`
+                  });
+                  // Reload to show updated highlights
+                  window.location.reload();
+                } catch (err) {
+                  console.error('Failed to update advancement:', err);
+                  setUpdating(false);
+                }
+              }}
+              className="button button-success"
+              disabled={updating}
+              style={{ marginTop: '10px', width: '100%' }}
+            >
+              {updating ? 'Updating...' : 'Update Group Config (No Regeneration)'}
+            </button>
+          )}
           <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '5px' }}>
-            This will create a {numGroups * advancePlayers}-player knockout bracket
+            {advancementChanged 
+              ? 'Click "Update Group Config" to change advancement without regenerating groups' 
+              : `This will create a ${numGroups * advancePlayers}-player knockout bracket`}
           </p>
         </div>
       )}
-
-      <button 
-        onClick={handleSave}
-        className="button button-success button-large"
-        style={{ marginTop: '20px' }}
-      >
-        Save Group Configuration
-      </button>
     </div>
   );
 };

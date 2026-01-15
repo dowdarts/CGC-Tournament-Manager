@@ -11,6 +11,41 @@ export interface Tournament {
   advancement_rules: string;
   tiebreakers: string[];
   status: 'setup' | 'group-stage' | 'knockout' | 'completed';
+  
+  // Workflow steps
+  setup_completed?: boolean;
+  participants_confirmed?: boolean;
+  groups_generated?: boolean;
+  group_stage_created?: boolean;
+  
+  // Scoring Configuration
+  scoring_system?: {
+    primary_metric: 'match_wins' | 'leg_wins' | 'tournament_points';
+    
+    // Round Robin (Group Stage) Format
+    roundrobin_format: 'matchplay' | 'set_play';
+    roundrobin_legs_per_match?: number; // For matchplay
+    roundrobin_legs_per_set?: number; // For set play
+    roundrobin_sets_per_match?: number; // For set play
+    
+    // Knockout Format
+    knockout_format: 'matchplay' | 'set_play';
+    knockout_legs_per_match?: number; // For matchplay
+    knockout_legs_per_set?: number; // For set play
+    knockout_sets_per_match?: number; // For set play
+    
+    // Play Style (for match play only)
+    roundrobin_play_style?: 'play_all' | 'best_of'; // Play all legs or best of
+    knockout_play_style?: 'play_all' | 'best_of'; // Play all legs or best of
+    
+    // Points System
+    points_for_win: number; // Default: 2
+    points_for_draw: number; // Default: 1
+    points_for_loss: number; // Default: 0
+    bonus_points_enabled?: boolean;
+    tiebreak_order: ('leg_difference' | 'head_to_head' | 'legs_won' | 'legs_lost' | 'match_wins')[];
+  };
+  
   created_at: string;
   updated_at: string;
 }

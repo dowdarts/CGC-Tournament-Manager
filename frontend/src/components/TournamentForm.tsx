@@ -8,7 +8,7 @@ interface TournamentFormProps {
   existingTournament?: Tournament;
 }
 
-const TournamentForm: React.FC<TournamentFormProps> = ({ onSubmit, isLoading = false }) => {
+const TournamentForm: React.FC<TournamentFormProps> = ({ onSubmit, isLoading = false, isEditing = false }) => {
   const [formData, setFormData] = useState({
     name: '',
     date: new Date().toISOString().split('T')[0],
