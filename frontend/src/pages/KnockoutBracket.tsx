@@ -33,7 +33,7 @@ const KnockoutBracket: React.FC = () => {
     try {
       setLoading(true);
       
-      // Fetch knockout matches from database
+      // Fetch knockout matches from database (group_id IS NULL = knockout matches)
       const { data: matches, error } = await supabase
         .from('matches')
         .select(`
@@ -47,7 +47,10 @@ const KnockoutBracket: React.FC = () => {
         .order('round', { ascending: true })
         .order('board_number', { ascending: true });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
       
       // Load round names from localStorage
       const roundNamesJson = localStorage.getItem('knockoutRoundNames');
