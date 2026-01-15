@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>CGCDarts Prize Pool Calculator</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" href="paycal-logo.png" type="image/png">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            color: #e2e8f0;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #6366f1, #8b5cf6);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #7c3aed, #a78bfa);
+        }
+
+        /* Logo Header */
+        .logo-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            padding: 1.5rem 1rem;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 2px solid rgba(99, 102, 241, 0.3);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .logo-header img {
+            height: 60px;
+            width: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 8px rgba(99, 102, 241, 0.4));
+        }
+
+        .logo-header h1 {
+            font-size: clamp(1.25rem, 4vw, 2rem);
+            font-weight: 800;
+            background: linear-gradient(135deg, #6366f1, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Glass morphism cards */
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 1rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Button Styles */
+        .btn {
+            transition: all 0.3s ease;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        /* Input Focus */
+        input:focus, select:focus {
+            outline: none;
+            ring: 2px;
+            ring-color: #6366f1;
+            border-color: #6366f1;
+        }
+
+        /* Responsive Grid */
+        .preset-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+        }
+
+        /* Mobile Optimization */
+        @media (max-width: 768px) {
+            .logo-header img {
+                height: 50px;
+            }
+
+            .preset-grid {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+
+            .glass-card {
+                padding: 1rem !important;
+            }
+
+            /* Mobile-friendly input fields */
+            input[type="number"] {
+                font-size: 16px !important; /* Prevents zoom on iOS */
+                min-height: 44px; /* Apple's recommended touch target */
+                padding: 0.75rem !important;
+            }
+
+            /* Larger percentage inputs on mobile */
+            .prize-row input[type="number"] {
+                min-width: 80px;
+                padding: 0.625rem !important;
+            }
+        }
+
+        /* Animation */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fade-in {
+            animation: fadeInUp 0.5s ease-out forwards;
+        }
+
+        /* Prize row hover effect */
+        .prize-row {
+            transition: all 0.2s ease;
+        }
+
+        .prize-row:hover {
+            background: rgba(99, 102, 241, 0.1);
+            transform: translateX(4px);
+        }
+
+        /* Badge styles */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-success {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .badge-error {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        /* Tooltip */
+        .tooltip-container {
+            position: relative;
+            display: inline-flex;
+        }
+
+        .tooltip-text {
+            visibility: hidden;
+            opacity: 0;
+            position: absolute;
+            z-index: 100;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #1e293b;
+            color: #e2e8f0;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            width: max-content;
+            max-width: 300px;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            transition: opacity 0.3s, visibility 0.3s;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+
+        .tooltip-container:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            border: 3px solid rgba(99, 102, 241, 0.2);
+            border-top: 3px solid #6366f1;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Logo Header -->
+    <div class="logo-header">
+        <img src="paycal-logo.png" alt="CGCDarts Logo">
+        <h1>Prize Pool Calculator</h1>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container mx-auto px-4 py-6 max-w-7xl">
+        
+        <!-- How To Use Section -->
+        <div class="glass-card p-6 mb-6 animate-fade-in">
+            <div class="flex items-center gap-2 mb-4">
+                <svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <h2 class="text-xl font-bold text-indigo-400">How To Use</h2>
+            </div>
+            <ol class="list-decimal list-inside space-y-2 text-sm text-gray-300">
+                <li>Enter the <strong class="text-white">Entry Fee ($)</strong> and <strong class="text-white">Number of Players</strong></li>
+                <li>Adjust <strong class="text-white">Deductions & Side Pools</strong> by checking/unchecking options</li>
+                <li>Select a <strong class="text-white">Preset Button</strong> or manually add places</li>
+                <li>Review the breakdown and adjust percentages as needed</li>
+            </ol>
+        </div>
+
+        <!-- Main Calculator Card -->
+        <div class="glass-card p-6 animate-fade-in" style="animation-delay: 0.1s">
+            
+            <!-- Top Section: Inputs and Presets -->
+            <div class="grid lg:grid-cols-3 gap-6 mb-8">
+                
+                <!-- Left: Preset Buttons -->
+                <div class="lg:col-span-2">
+                    <h2 class="text-lg font-bold mb-4 text-gray-200 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                        Distribution Presets
+                    </h2>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- 50% Winner Column -->
+                        <div>
+                            <h3 class="text-sm font-bold text-center mb-3 text-indigo-400">50% Winner</h3>
+                            <div class="space-y-2">
+                                <button class="preset-btn btn bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium py-2.5 px-4 rounded-lg shadow-lg w-full" data-preset="top4_50">Top 4</button>
+                                <button class="preset-btn btn bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium py-2.5 px-4 rounded-lg shadow-lg w-full" data-preset="top8_50">Top 8</button>
+                                <button class="preset-btn btn bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium py-2.5 px-4 rounded-lg shadow-lg w-full" data-preset="top16_50">Top 16</button>
+                                <button class="preset-btn btn bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium py-2.5 px-4 rounded-lg shadow-lg w-full" data-preset="top32_50">Top 32</button>
+                            </div>
+                        </div>
+
+                        <!-- 30% Winner Column -->
+                        <div>
+                            <h3 class="text-sm font-bold text-center mb-3 text-indigo-400">30% Winner</h3>
+                            <div class="space-y-2">
+                                <button class="preset-btn btn bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-medium py-2.5 px-4 rounded-lg shadow-lg w-full" data-preset="top4_30">Top 4</button>
+                                <button class="preset-btn btn bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-medium py-2.5 px-4 rounded-lg shadow-lg w-full" data-preset="top8_30">Top 8</button>
+                                <button class="preset-btn btn bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-medium py-2.5 px-4 rounded-lg shadow-lg w-full" data-preset="top16_30">Top 16</button>
+                                <button class="preset-btn btn bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-medium py-2.5 px-4 rounded-lg shadow-lg w-full" data-preset="top32_30">Top 32</button>
+                            </div>
+                        </div>
+
+                        <!-- Money Back Column -->
+                        <div>
+                            <h3 class="text-sm font-bold text-center mb-3 text-indigo-400 flex items-center justify-center gap-1">
+                                Money Back
+                                <div class="tooltip-container">
+                                    <svg class="w-4 h-4 text-yellow-400 cursor-help" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                                    </svg>
+                                    <span class="tooltip-text">
+                                        For Top 8, 16, 32: The last paying position receives their entry fee back. Top 4 is special: Joint 3rd-4th split 25% of the total prize pool (12.5% each).
+                                    </span>
+                                </div>
+                            </h3>
+                            <div class="space-y-2">
+                                <button class="preset-btn btn bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 text-white font-medium py-2.5 px-4 rounded-lg shadow-lg w-full" data-preset="top4_buyin_refund">Top 4</button>
+                                <button class="preset-btn btn bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 text-white font-medium py-2.5 px-4 rounded-lg shadow-lg w-full" data-preset="top8_buyin_refund">Top 8</button>
+                                <button class="preset-btn btn bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 text-white font-medium py-2.5 px-4 rounded-lg shadow-lg w-full" data-preset="top16_buyin_refund">Top 16</button>
+                                <button class="preset-btn btn bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 text-white font-medium py-2.5 px-4 rounded-lg shadow-lg w-full" data-preset="top32_buyin_refund">Top 32</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Input & Pools Section -->
+                <div class="space-y-4">
+                    <!-- Entry Fee & Players -->
+                    <div class="glass-card p-4">
+                        <div class="space-y-4">
+                            <div>
+                                <label for="entryFee" class="block text-sm font-medium text-indigo-300 mb-2">Entry Fee ($)</label>
+                                <input type="number" inputmode="decimal" id="entryFee" value="30" min="1" step="1"
+                                    class="w-full text-center bg-gray-900 border border-gray-700 rounded-lg text-xl text-white p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                                    oninput="calculatePrizes(); updatePlayerRecommendation();"
+                                    title="Tap to enter amount or use arrows">
+                            </div>
+                            <div>
+                                <label for="numPlayers" class="block text-sm font-medium text-indigo-300 mb-2">Number of Players</label>
+                                <input type="number" inputmode="numeric" id="numPlayers" value="32" min="1" step="1"
+                                    class="w-full text-center bg-gray-900 border border-gray-700 rounded-lg text-xl text-white p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                                    oninput="calculatePrizes(); updatePlayerRecommendation();"
+                                    title="Tap to enter number or use arrows">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Player Recommendation -->
+                    <div id="recommendationBox" class="glass-card p-4 border-green-500/50">
+                        <p id="recommendationText" class="text-sm font-medium text-green-300 text-center"></p>
+                    </div>
+
+                    <!-- Deductions Section -->
+                    <div class="glass-card p-4 border-red-500/30">
+                        <h3 class="text-sm font-bold text-red-300 mb-3 border-b border-red-700/50 pb-2">Deductions & Side Pools</h3>
+                        <div class="space-y-3 text-sm">
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" id="enableDartConnectFee" checked
+                                        class="h-4 w-4 text-red-600 bg-gray-900 border-red-600 rounded focus:ring-red-500"
+                                        onchange="calculatePrizes();">
+                                    <label for="enableDartConnectFee" class="text-red-200 font-medium">DC Fee</label>
+                                </div>
+                                <input type="number" inputmode="decimal" id="dartConnectFee" value="3.00" min="0" step="0.01"
+                                    class="w-20 text-right bg-gray-900 border border-gray-700 rounded-lg text-white p-1.5 text-sm focus:ring-red-500"
+                                    oninput="calculatePrizes();"
+                                    title="Tap to enter amount">
+                            </div>
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" id="enableHighScoreCont" checked
+                                        class="h-4 w-4 text-red-600 bg-gray-900 border-red-600 rounded focus:ring-red-500"
+                                        onchange="calculatePrizes();">
+                                    <label for="enableHighScoreCont" class="text-red-200 font-medium">High Score</label>
+                                </div>
+                                <input type="number" inputmode="decimal" id="highScoreCont" value="1.00" min="0" step="0.01"
+                                    class="w-20 text-right bg-gray-900 border border-gray-700 rounded-lg text-white p-1.5 text-sm focus:ring-red-500"
+                                    oninput="calculatePrizes();"
+                                    title="Tap to enter amount">
+                            </div>
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" id="enableHighFinishCont" checked
+                                        class="h-4 w-4 text-red-600 bg-gray-900 border-red-600 rounded focus:ring-red-500"
+                                        onchange="calculatePrizes();">
+                                    <label for="enableHighFinishCont" class="text-red-200 font-medium">High Finish</label>
+                                </div>
+                                <input type="number" inputmode="decimal" id="highFinishCont" value="1.00" min="0" step="0.01"
+                                    class="w-20 text-right bg-gray-900 border border-gray-700 rounded-lg text-white p-1.5 text-sm focus:ring-red-500"
+                                    oninput="calculatePrizes();"
+                                    title="Tap to enter amount">
+                            </div>
+                        </div>
+                        <div class="border-t border-red-700/50 pt-3 mt-3 space-y-1 text-xs">
+                            <p id="dcFeePool" class="flex justify-between text-red-100"><span>DC Fees:</span> <strong class="text-red-300">$0.00</strong></p>
+                            <p id="highScorePool" class="flex justify-between text-red-100"><span>High Score Pool:</span> <strong class="text-red-300">$0.00</strong></p>
+                            <p id="highFinishPool" class="flex justify-between text-red-100"><span>High Finish Pool:</span> <strong class="text-red-300">$0.00</strong></p>
+                        </div>
+                    </div>
+
+                    <!-- Total Pool Display -->
+                    <div class="glass-card p-4 border-indigo-500/50">
+                        <p class="text-xs font-medium text-indigo-300 text-center mb-2">Net Main Prize Pool</p>
+                        <p id="totalPool" class="text-3xl font-bold text-green-400 text-center">$800.00</p>
+                        <p id="grossPool" class="text-xs font-medium text-gray-500 text-center mt-1">(Gross Pool: $960.00)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prize Breakdown Section -->
+            <div class="border-t border-gray-700 pt-6">
+                <h2 class="text-xl font-bold mb-4 text-gray-200 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Main Prize Breakdown
+                </h2>
+
+                <!-- Manual Controls -->
+                <div class="flex flex-wrap gap-3 mb-6">
+                    <button onclick="addPlace()" class="btn bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-medium py-2.5 px-5 rounded-lg shadow-lg flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Add Place
+                    </button>
+                    <button onclick="clearPrizes()" class="btn bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-medium py-2.5 px-5 rounded-lg shadow-lg flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                        Clear All
+                    </button>
+                </div>
+
+                <!-- Prize List -->
+                <div id="prizeList" class="space-y-3 mb-8">
+                    <!-- Prize rows will be inserted here -->
+                </div>
+
+                <!-- Allocation Summary -->
+                <div class="glass-card p-6 border-indigo-500/50">
+                    <h3 class="text-lg font-bold text-gray-200 mb-4">Total Allocation</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-400">Total % Allocated:</span>
+                            <span id="percentAllocated" class="text-xl font-bold">0.00%</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-400">Total $ Allocated:</span>
+                            <span id="amountAllocated" class="text-xl font-bold">$0.00</span>
+                        </div>
+                        <div class="flex justify-between items-center pt-3 border-t border-gray-600">
+                            <span class="text-base font-bold text-gray-200">Remaining Net Pool:</span>
+                            <span id="remainingPool" class="text-2xl font-extrabold">$960.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Disclaimer -->
+            <div class="glass-card p-6 mt-8 border-yellow-500/50 bg-yellow-900/20">
+                <div class="flex items-start gap-3">
+                    <svg class="w-6 h-6 text-yellow-400 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                    <div class="text-sm text-yellow-100">
+                        <p class="font-bold mb-2 text-yellow-200">⚠️ IMPORTANT DISCLAIMER</p>
+                        <p class="mb-3">This calculator is for <strong>RECOMMENDATION</strong> purposes only. The Tournament Director and Payout Committee have the final say. Always verify numbers before use.</p>
+                        <p class="font-semibold mb-2 text-yellow-200">Calculation Notes:</p>
+                        <ul class="list-disc list-inside space-y-1 text-xs ml-4">
+                            <li>Assumes 100% payout of Net Main Prize Pool</li>
+                            <li>Net pool calculated after deducting enabled fees</li>
+                            <li>Amounts rounded to nearest dollar with difference applied to largest prize</li>
+                        </ul>
+                        <p class="mt-3 text-xs text-yellow-300"><strong>CGCDarts.com is not responsible</strong> for any miscalculated prize payouts or discrepancies.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-8 mb-4">
+            <p class="text-sm text-gray-500">Designed by <span class="text-indigo-400 font-semibold">MDstudios</span> for <span class="text-indigo-400 font-semibold">CGCDarts.com</span></p>
+            <p class="text-xs text-gray-600 mt-2">Compatible with Windows, macOS, iOS, and Android</p>
+        </div>
+    </div>
+
+    <script>
+        // Global State
+        let prizes = [];
+        
+        // Preset Configurations
+        const PRESETS = {
+            createRanks: (n) => {
+                if (n === 4) return [{ place: '1st', split: 1 }, { place: '2nd', split: 1 }, { place: '3rd-4th', split: 2 }];
+                if (n === 8) return [{ place: '1st', split: 1 }, { place: '2nd', split: 1 }, { place: '3rd-4th', split: 2 }, { place: '5th-8th', split: 4 }];
+                if (n === 16) return [{ place: '1st', split: 1 }, { place: '2nd', split: 1 }, { place: '3rd-4th', split: 2 }, { place: '5th-8th', split: 4 }, { place: '9th-16th', split: 8 }];
+                if (n === 32) return [{ place: '1st', split: 1 }, { place: '2nd', split: 1 }, { place: '3rd-4th', split: 2 }, { place: '5th-8th', split: 4 }, { place: '9th-16th', split: 8 }, { place: '17th-32nd', split: 16 }];
+                return [];
+            },
+            top4_50: [
+                { place: '1st', percent: 50.00, split: 1 },
+                { place: '2nd', percent: 30.00, split: 1 },
+                { place: '3rd-4th', percent: 20.00, split: 2 }
+            ],
+            top8_50: [
+                { place: '1st', percent: 50.00, split: 1 },
+                { place: '2nd', percent: 25.00, split: 1 },
+                { place: '3rd-4th', percent: 15.00, split: 2 },
+                { place: '5th-8th', percent: 10.00, split: 4 }
+            ],
+            top16_50: [
+                { place: '1st', percent: 50.00, split: 1 },
+                { place: '2nd', percent: 20.00, split: 1 },
+                { place: '3rd-4th', percent: 10.00, split: 2 },
+                { place: '5th-8th', percent: 10.00, split: 4 },
+                { place: '9th-16th', percent: 10.00, split: 8 }
+            ],
+            top32_50: [
+                { place: '1st', percent: 50.00, split: 1 },
+                { place: '2nd', percent: 15.00, split: 1 },
+                { place: '3rd-4th', percent: 10.00, split: 2 },
+                { place: '5th-8th', percent: 10.00, split: 4 },
+                { place: '9th-16th', percent: 10.00, split: 8 },
+                { place: '17th-32nd', percent: 5.00, split: 16 }
+            ],
+            top4_30: [
+                { place: '1st', percent: 30.00, split: 1 },
+                { place: '2nd', percent: 30.00, split: 1 },
+                { place: '3rd-4th', percent: 40.00, split: 2 }
+            ],
+            top8_30: [
+                { place: '1st', percent: 30.00, split: 1 },
+                { place: '2nd', percent: 20.00, split: 1 },
+                { place: '3rd-4th', percent: 20.00, split: 2 },
+                { place: '5th-8th', percent: 30.00, split: 4 }
+            ],
+            top16_30: [
+                { place: '1st', percent: 30.00, split: 1 },
+                { place: '2nd', percent: 15.00, split: 1 },
+                { place: '3rd-4th', percent: 15.00, split: 2 },
+                { place: '5th-8th', percent: 20.00, split: 4 },
+                { place: '9th-16th', percent: 20.00, split: 8 }
+            ],
+            top32_30: [
+                { place: '1st', percent: 30.00, split: 1 },
+                { place: '2nd', percent: 15.00, split: 1 },
+                { place: '3rd-4th', percent: 10.00, split: 2 },
+                { place: '5th-8th', percent: 15.00, split: 4 },
+                { place: '9th-16th', percent: 15.00, split: 8 },
+                { place: '17th-32nd', percent: 15.00, split: 16 }
+            ],
+            top4_buyin_refund: [
+                { place: '1st', percent: 50.00, split: 1 },
+                { place: '2nd', percent: 25.00, split: 1 },
+                { place: '3rd-4th', percent: 25.00, split: 2 }
+            ]
+        };
+
+        // Utility Functions
+        function roundToNearestDollar(amount) {
+            return Math.round(amount);
+        }
+
+        function getStartRank(place) {
+            const match = place.match(/^(\d+)/);
+            return match ? parseInt(match[1]) : Infinity;
+        }
+
+        function sortPrizes(a, b) {
+            const rankA = getStartRank(a.place);
+            const rankB = getStartRank(b.place);
+            if (rankA < rankB) return -1;
+            if (rankA > rankB) return 1;
+            return 0;
+        }
+
+        function getDisplayRankLabel(place, split) {
+            if (split === 1) return place;
+            const match = place.match(/^(\d+)(st|nd|rd|th)/);
+            if (match) return `Jnt ${match[0]}`;
+            return place;
+        }
+
+        // Main Calculation Function
+        function calculatePrizes() {
+            const entryFee = parseFloat(document.getElementById('entryFee').value) || 0;
+            const numPlayers = parseInt(document.getElementById('numPlayers').value) || 0;
+            
+            const grossPool = entryFee * numPlayers;
+            document.getElementById('grossPool').textContent = `(Gross Pool: $${grossPool.toFixed(2)})`;
+
+            const dartConnectEnabled = document.getElementById('enableDartConnectFee').checked;
+            const highScoreEnabled = document.getElementById('enableHighScoreCont').checked;
+            const highFinishEnabled = document.getElementById('enableHighFinishCont').checked;
+
+            const dartConnectInput = parseFloat(document.getElementById('dartConnectFee').value) || 0;
+            const highScoreInput = parseFloat(document.getElementById('highScoreCont').value) || 0;
+            const highFinishInput = parseFloat(document.getElementById('highFinishCont').value) || 0;
+
+            const dartConnectFee = dartConnectEnabled ? dartConnectInput : 0;
+            const highScoreCont = highScoreEnabled ? highScoreInput : 0;
+            const highFinishCont = highFinishEnabled ? highFinishInput : 0;
+
+            const totalDeductionPerPlayer = dartConnectFee + highScoreCont + highFinishCont;
+            const netEntryFee = Math.max(0, entryFee - totalDeductionPerPlayer);
+            const netMainPrizePool = netEntryFee * numPlayers;
+
+            const totalDartConnectFee = dartConnectFee * numPlayers;
+            const totalHighScorePool = highScoreCont * numPlayers;
+            const totalHighFinishPool = highFinishCont * numPlayers;
+
+            document.getElementById('dcFeePool').innerHTML = `<span>DC Fees:</span> <strong class="text-red-300">$${totalDartConnectFee.toFixed(2)}</strong>`;
+            document.getElementById('highScorePool').innerHTML = `<span>High Score Pool:</span> <strong class="text-red-300">$${totalHighScorePool.toFixed(2)}</strong>`;
+            document.getElementById('highFinishPool').innerHTML = `<span>High Finish Pool:</span> <strong class="text-red-300">$${totalHighFinishPool.toFixed(2)}</strong>`;
+            
+            document.getElementById('totalPool').textContent = `$${netMainPrizePool.toFixed(2)}`;
+
+            prizes.sort(sortPrizes);
+
+            let totalUnroundedAmount = 0;
+            let totalRoundedAmount = 0;
+            let prizeData = [];
+
+            prizes.forEach((prize) => {
+                const percent = parseFloat(prize.percent) || 0;
+                const split = prize.split || 1;
+                
+                const unroundedAmount = (netMainPrizePool * (percent / 100));
+                const roundedAmount = roundToNearestDollar(unroundedAmount);
+
+                totalUnroundedAmount += unroundedAmount;
+                totalRoundedAmount += roundedAmount;
+                
+                prizeData.push({
+                    ...prize,
+                    unroundedAmount,
+                    roundedAmount
+                });
+            });
+
+            let finalTotalAllocated = totalRoundedAmount;
+            
+            if (Math.abs(totalUnroundedAmount - netMainPrizePool) < 0.01 && prizeData.length > 0) {
+                const totalRoundingDifference = netMainPrizePool - totalRoundedAmount;
+                let correctionIndex = prizeData.reduce((maxIndex, currentPrize, index, arr) => 
+                    currentPrize.roundedAmount > arr[maxIndex].roundedAmount ? index : maxIndex, 0);
+                prizeData[correctionIndex].correctedAmount = prizeData[correctionIndex].roundedAmount + totalRoundingDifference;
+                finalTotalAllocated = netMainPrizePool;
+            }
+
+            let finalPercentAllocated = 0;
+            let prizeHtml = '';
+
+            prizeData.forEach((data, index) => {
+                const amount = data.correctedAmount !== undefined ? data.correctedAmount : data.roundedAmount;
+                const individualPayout = amount / (data.split || 1);
+                const displayRank = getDisplayRankLabel(data.place, data.split);
+                
+                finalPercentAllocated += data.percent;
+
+                const numEnvelopes = data.split || 1;
+                const envelopeText = numEnvelopes === 1 
+                    ? `${numEnvelopes} Envelope`
+                    : `${numEnvelopes} Envelopes`;
+
+                prizeHtml += `
+                    <div class="prize-row glass-card p-4 rounded-lg border border-gray-600">
+                        <div class="flex flex-wrap items-center gap-3">
+                            <div class="flex items-center gap-3 flex-1 min-w-[200px]">
+                                <span class="badge bg-indigo-600 text-white px-3 py-1">${displayRank}</span>
+                                <div class="flex items-center gap-1">
+                                    <input type="number" inputmode="decimal" value="${data.percent.toFixed(2)}" min="0" max="100" step="0.01"
+                                        class="w-20 text-center bg-gray-900 border border-gray-600 rounded-lg text-white p-2 text-sm focus:ring-2 focus:ring-indigo-500"
+                                        oninput="updatePrizePercent(${index}, this.value)"
+                                        title="Tap to enter percentage or use arrows">
+                                    <span class="text-gray-400 font-semibold">%</span>
+                                </div>
+                            </div>
+                            
+                            <div class="hidden md:flex items-center gap-2 text-sm text-gray-400">
+                                <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 19v-8.93a2 2 0 01.89-1.664l7-4.666a2 2 0 012.22 0l7 4.666A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-1.14.76a2 2 0 01-2.22 0l-1.14-.76"/>
+                                </svg>
+                                ${envelopeText}
+                            </div>
+                            
+                            <div class="flex items-center gap-6 ml-auto">
+                                <div class="text-right">
+                                    <p class="text-xs text-gray-500">Total</p>
+                                    <p class="text-lg font-semibold text-white">$${amount.toFixed(2)}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-xs text-gray-500">Per Player</p>
+                                    <p class="text-xl font-bold text-green-400">$${individualPayout.toFixed(2)}</p>
+                                </div>
+                                <button onclick="removePlace(${index})" class="btn bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg transition">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            
+                            <div class="md:hidden w-full text-xs text-gray-400 flex items-center gap-1 pt-2 border-t border-gray-700">
+                                <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 19v-8.93a2 2 0 01.89-1.664l7-4.666a2 2 0 012.22 0l7 4.666A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-1.14.76a2 2 0 01-2.22 0l-1.14-.76"/>
+                                </svg>
+                                ${envelopeText}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('prizeList').innerHTML = prizeHtml;
+
+            const remainingPool = netMainPrizePool - finalTotalAllocated;
+            const percentAllocatedEl = document.getElementById('percentAllocated');
+            const amountAllocatedEl = document.getElementById('amountAllocated');
+            const remainingPoolEl = document.getElementById('remainingPool');
+
+            percentAllocatedEl.textContent = `${finalPercentAllocated.toFixed(2)}%`;
+            amountAllocatedEl.textContent = `$${finalTotalAllocated.toFixed(2)}`;
+            remainingPoolEl.textContent = `$${remainingPool.toFixed(2)}`;
+
+            const isFullyAllocated = Math.abs(finalPercentAllocated - 100) < 0.01;
+            percentAllocatedEl.className = isFullyAllocated ? 'text-xl font-bold text-green-400' : 'text-xl font-bold text-red-500';
+            amountAllocatedEl.className = Math.abs(remainingPool) < 0.01 ? 'text-xl font-bold text-green-400' : 'text-xl font-bold text-red-500';
+            remainingPoolEl.className = Math.abs(remainingPool) < 0.01 ? 'text-2xl font-extrabold text-green-400' : 'text-2xl font-extrabold text-red-500';
+        }
+
+        function updatePrizePercent(index, value) {
+            prizes[index].percent = parseFloat(value) || 0;
+            calculatePrizes();
+        }
+
+        function removePlace(index) {
+            prizes.splice(index, 1);
+            calculatePrizes();
+        }
+
+        function addPlace() {
+            prizes.push({ place: 'New Place', percent: 0, split: 1 });
+            calculatePrizes();
+        }
+
+        function clearPrizes() {
+            if (confirm('Are you sure you want to clear all prizes?')) {
+                prizes = [];
+                calculatePrizes();
+            }
+        }
+
+        function applyPreset(presetName) {
+            const entryFee = parseFloat(document.getElementById('entryFee').value) || 0;
+            const numPlayers = parseInt(document.getElementById('numPlayers').value) || 0;
+
+            if (presetName === 'top4_buyin_refund') {
+                prizes = PRESETS[presetName].map(p => ({ ...p }));
+            } else if (presetName.endsWith('_buyin_refund')) {
+                const n = parseInt(presetName.match(/\d+/)[0]);
+                const ranks = PRESETS.createRanks(n);
+                const numRefundPlayers = ranks[ranks.length - 1].split;
+                const totalRefundAmount = numRefundPlayers * entryFee;
+
+                const dartConnectEnabled = document.getElementById('enableDartConnectFee').checked;
+                const highScoreEnabled = document.getElementById('enableHighScoreCont').checked;
+                const highFinishEnabled = document.getElementById('enableHighFinishCont').checked;
+
+                const dartConnectInput = parseFloat(document.getElementById('dartConnectFee').value) || 0;
+                const highScoreInput = parseFloat(document.getElementById('highScoreCont').value) || 0;
+                const highFinishInput = parseFloat(document.getElementById('highFinishCont').value) || 0;
+
+                const dartConnectFee = dartConnectEnabled ? dartConnectInput : 0;
+                const highScoreCont = highScoreEnabled ? highScoreInput : 0;
+                const highFinishCont = highFinishEnabled ? highFinishInput : 0;
+
+                const totalDeductionPerPlayer = dartConnectFee + highScoreCont + highFinishCont;
+                const netEntryFee = Math.max(0, entryFee - totalDeductionPerPlayer);
+                const netMainPrizePool = netEntryFee * numPlayers;
+
+                if (netMainPrizePool === 0) {
+                    prizes = [];
+                    calculatePrizes();
+                    return;
+                }
+
+                const lastPercent = (totalRefundAmount / netMainPrizePool) * 100;
+                const remainingPercent = 100 - lastPercent;
+
+                const ratios = {
+                    'top8': [30.00, 20.00, 20.00],
+                    'top16': [30.00, 15.00, 15.00, 20.00],
+                    'top32': [30.00, 15.00, 10.00, 15.00, 15.00],
+                };
+                const ratioKey = presetName.substring(0, presetName.indexOf('_'));
+                const baseRatios = ratios[ratioKey] || [];
+                const baseRatioTotal = baseRatios.reduce((sum, ratio) => sum + ratio, 0);
+
+                prizes = [];
+
+                if (baseRatioTotal > 0 && remainingPercent > 0) {
+                    for (let i = 0; i < baseRatios.length; i++) {
+                        const scaledPercent = (baseRatios[i] / baseRatioTotal) * remainingPercent;
+                        prizes.push({ place: ranks[i].place, percent: scaledPercent, split: ranks[i].split });
+                    }
+                }
+
+                if (lastPercent > 0) {
+                    prizes.push({ place: ranks[ranks.length - 1].place, percent: lastPercent, split: ranks[ranks.length - 1].split });
+                }
+            } else {
+                prizes = PRESETS[presetName].map(p => ({ ...p }));
+            }
+
+            calculatePrizes();
+        }
+
+        function updatePlayerRecommendation() {
+            const numPlayers = parseInt(document.getElementById('numPlayers').value) || 0;
+            const recEl = document.getElementById('recommendationText');
+            let recommendation = '';
+            let preset = '';
+
+            if (numPlayers < 4) {
+                recommendation = 'Enter 4 or more players to get a recommendation.';
+            } else if (numPlayers >= 4 && numPlayers <= 16) {
+                preset = 'Top 4';
+            } else if (numPlayers >= 17 && numPlayers <= 54) {
+                preset = 'Top 8';
+            } else if (numPlayers >= 55 && numPlayers <= 100) {
+                preset = 'Top 16';
+            } else if (numPlayers >= 101) {
+                preset = 'Top 32';
+            }
+
+            if (preset) {
+                recommendation = `✅ Recommended Payout: <strong>${preset}</strong> (30% winner, last position money back)`;
+            }
+
+            recEl.innerHTML = recommendation;
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.preset-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    applyPreset(e.target.dataset.preset);
+                });
+            });
+
+            applyPreset('top32_buyin_refund');
+            updatePlayerRecommendation();
+            calculatePrizes();
+        });
+    </script>
+</body>
+</html>
