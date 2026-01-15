@@ -139,14 +139,13 @@ const KnockoutBracket: React.FC = () => {
         .from('matches')
         .select(`
           *,
-          player1:players!matches_player1_id_fkey(id, name),
-          player2:players!matches_player2_id_fkey(id, name),
-          winner:players!matches_winner_id_fkey(id, name)
+          player1:player1_id(id, name),
+          player2:player2_id(id, name),
+          winner:winner_id(id, name)
         `)
         .eq('tournament_id', id)
         .is('group_id', null)
-        .order('round', { ascending: true })
-        .order('board_number', { ascending: true });
+        .order('created_at', { ascending: true });
       
       if (error) {
         console.error('Database error:', error);
