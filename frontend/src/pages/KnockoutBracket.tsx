@@ -90,14 +90,12 @@ const KnockoutBracket: React.FC = () => {
       // Save matches to database
       const matchesToCreate = fullBracket.map((match: any, index: number) => ({
         tournament_id: id,
-        round: index + 1,
-        board_number: match.bracket_position || (index + 1),
         player1_id: match.player1?.id || null,
         player2_id: match.player2?.id || null,
-        player1_score: null,
-        player2_score: null,
+        player1_legs: 0,
+        player2_legs: 0,
         winner_id: null,
-        completed: false,
+        status: 'scheduled',
         group_id: null // Null for knockout matches
       }));
       
@@ -111,13 +109,10 @@ const KnockoutBracket: React.FC = () => {
       
       console.log('✅ Generated knockout bracket with', createdMatches?.length, 'matches');
       
-      // Update tournament status
+      // Update tournament status to knockout
       const { error: updateError } = await supabase
         .from('tournaments')
-        .update({
-          knockout_started: true,
-          group_stage_completed: true
-        })
+        .update({ status: 'knockout' })
         .eq('id', id);
       
       if (updateError) throw updateError;
@@ -184,8 +179,8 @@ const KnockoutBracket: React.FC = () => {
     }
     
     setSelectedMatch(match);
-    setScore1(match.player1_score?.toString() || '');
-    setScore2(match.player2_score?.toString() || '');
+    setScore1(match.player1_legs?.toString() || '');
+    setScore2(match.player2_legs?.toString() || '');
     setShowScoreModal(true);
   };
 
@@ -209,10 +204,10 @@ const KnockoutBracket: React.FC = () => {
       const { error: updateError } = await supabase
         .from('matches')
         .update({
-          player1_score: s1,
-          player2_score: s2,
+          player1_legs: s1,
+          player2_legs: s2,
           winner_id: winnerId,
-          completed: true
+          status: 'completed'
         })
         .eq('id', selectedMatch.id);
       
@@ -362,9 +357,9 @@ const KnockoutBracket: React.FC = () => {
                       <div 
                         onClick={() => handleMatchClick(match)}
                         className={`bg-white border-2 rounded-xl shadow-lg transition-all duration-200 w-56 ${
-                          match.player1 && match.player2 && !match.completed
+                          match.player1 && match.player2 && match.status !== 'completed'
                             ? 'border-blue-300 cursor-pointer hover:border-blue-500 hover:-translate-y-0.5 hover:shadow-xl'
-                            : match.completed
+                            : match.status === 'completed'
                             ? 'border-slate-200'
                             : 'border-slate-200 cursor-not-allowed opacity-60'
                         }`}
@@ -382,7 +377,7 @@ const KnockoutBracket: React.FC = () => {
                               {match.player1?.name || 'TBD'}
                             </span>
                           </div>
-                          {match.player1_score !== null && match.player1_score !== undefined && (
+                          {match.player1_legs !== null && match.player1_legs !== undefined && (
                             <span 
                               className={`ml-2 flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded min-w-[28px] text-center ${
                                 match.winner_id === match.player1_id 
@@ -390,7 +385,7 @@ const KnockoutBracket: React.FC = () => {
                                   : 'bg-slate-700 text-white'
                               }`}
                             >
-                              {match.player1_score}
+                              {match.player1_legs}
                             </span>
                           )}
                         </div>
@@ -408,7 +403,7 @@ const KnockoutBracket: React.FC = () => {
                               {match.player2?.name || 'TBD'}
                             </span>
                           </div>
-                          {match.player2_score !== null && match.player2_score !== undefined && (
+                          {match.player2_legs !== null && match.player2_legs !== undefined && (
                             <span 
                               className={`ml-2 flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded min-w-[28px] text-center ${
                                 match.winner_id === match.player2_id 
@@ -416,7 +411,7 @@ const KnockoutBracket: React.FC = () => {
                                   : 'bg-slate-700 text-white'
                               }`}
                             >
-                              {match.player2_score}
+                              {match.player2_legs}
                             </span>
                           )}
                         </div>
