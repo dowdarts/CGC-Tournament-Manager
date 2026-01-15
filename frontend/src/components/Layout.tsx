@@ -15,6 +15,28 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="app">
+      {/* Logo Banner Header */}
+      <div style={{
+        width: '100%',
+        backgroundColor: '#1e293b',
+        padding: '20px 0',
+        textAlign: 'center',
+        borderBottom: '3px solid #667eea'
+      }}>
+        <img 
+          src="/Tournament manager logo.png" 
+          alt="Tournament Manager" 
+          style={{ 
+            maxWidth: '100%',
+            height: 'auto',
+            maxHeight: '200px',
+            display: 'block',
+            margin: '0 auto'
+          }} 
+        />
+      </div>
+
+      {/* Navigation Bar */}
       <header className="header">
         <div className="container">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -25,12 +47,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               >
                 <Menu size={24} />
               </button>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <img src="/Tournament manager logo.png" alt="Tournament Manager" style={{ height: '36px', width: 'auto' }} />
-                <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold' }}>
-                  Dart Tournament Manager
-                </h1>
-              </div>
+              <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold' }}>
+                Dart Tournament Manager
+              </h1>
             </div>
             <nav>
               <ul className="nav-menu">
