@@ -9,6 +9,9 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src')
     }
   },
+  optimizeDeps: {
+    exclude: ['brackets-viewer', 'brackets-manager', 'brackets-model']
+  },
   server: {
     port: 5173,
     strictPort: false,
@@ -16,6 +19,9 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true
+    sourcemap: true,
+    commonjsOptions: {
+      include: [/brackets-viewer/, /brackets-manager/, /brackets-model/, /node_modules/]
+    }
   }
 })

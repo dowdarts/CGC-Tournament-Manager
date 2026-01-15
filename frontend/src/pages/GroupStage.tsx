@@ -266,8 +266,8 @@ const GroupStage: React.FC = () => {
       
       // Also save tournament info
       const tournamentInfo = {
-        id: tournamentId,
-        name: tournamentId,
+        id: id || 'tournament',
+        name: tournament?.name || 'Tournament',
         totalPlayers,
         advancingPlayers: firstRoundMatches.length * 2,
         format: knockoutMatchFormat,

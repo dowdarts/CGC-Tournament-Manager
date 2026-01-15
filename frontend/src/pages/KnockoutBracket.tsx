@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Trophy, Calendar, Users, RefreshCw } from 'lucide-react';
-import { createBracket, render as renderBracket } from 'brackets-viewer';
 import type { Match, MatchGame, Participant } from 'brackets-model';
-import 'brackets-viewer/dist/brackets-viewer.min.css';
 
 interface Player {
   id: string;
@@ -239,42 +237,7 @@ const KnockoutBracket: React.FC = () => {
   };
 
   const initializeBracket = () => {
-    if (!bracketRef.current) return;
-
-    // Convert our match data to brackets-viewer format
-    const bracketData = convertToBracketFormat(knockoutMatches, participants);
-    
-    try {
-      // Clear the container
-      bracketRef.current.innerHTML = '';
-      
-      // Render the bracket
-      renderBracket(
-        {
-          stages: bracketData.stages,
-          matches: bracketData.matches,
-          matchGames: bracketData.match_games,
-          participants: bracketData.participants
-        },
-        {
-          selector: bracketRef.current,
-          participantOriginPlacement: 'before',
-          separatorHeight: 30,
-          matchMinWidth: 280,
-          roundHeader: {
-            size: 60,
-            roundTextGenerator: (round: any) => {
-              const roundNames = ['Quarter-Finals', 'Semi-Finals', 'Final'];
-              return roundNames[round.number - 1] || `Round ${round.number}`;
-            }
-          }
-        }
-      );
-
-      setBracketInitialized(true);
-    } catch (error) {
-      console.error('Error initializing bracket:', error);
-    }
+    setBracketInitialized(true);
   };
 
   const convertToBracketFormat = (matches: KnockoutMatch[], players: Player[]): BracketData => {
@@ -347,9 +310,75 @@ const KnockoutBracket: React.FC = () => {
 
   const handleRefresh = () => {
     setBracketInitialized(false);
+    const savedKnockout = localStorage.getItem('knockoutBracket');
+    if (savedKnockout) {
+      const matches = JSON.parse(savedKnockout);
+      setKnockoutMatches(matches);
+      extractParticipants(matches);
+    }
     setTimeout(() => {
       initializeBracket();
     }, 100);
+  };
+
+  const renderBracketByRound = () => {
+    // Group matches by round
+    const matchesByRound: { [round: string]: KnockoutMatch[] } = {};
+    knockoutMatches.forEach(match => {
+      if (!matchesByRound[match.round]) {
+        matchesByRound[match.round] = [];
+      }
+      matchesByRound[match.round].push(match);
+    });
+
+    const rounds = Object.keys(matchesByRound).sort((a, b) => {
+      const order: { [key: string]: number } = {
+        'Round of 64': 1, 'Round of 32': 2, 'Round of 16': 3,
+        'Quarter-Final': 4, 'Semi-Final': 5, 'Final': 6
+      };
+      return (order[a] || 0) - (order[b] || 0);
+    });
+
+    return (
+      <div className="flex gap-8 justify-center items-start">
+        {rounds.map(roundName => (
+          <div key={roundName} className="flex flex-col gap-4 min-w-[280px]">
+            <h3 className="text-xl font-bold text-center text-purple-400 mb-4">{roundName}</h3>
+            {matchesByRound[roundName].map(match => (
+              <div key={match.bracket_position} className="bg-gray-700 rounded-lg border border-gray-600 p-4">
+                <div className="text-xs text-gray-400 mb-2">Match {match.match}</div>
+                
+                {/* Player 1 */}
+                <div className={`flex items-center justify-between p-2 rounded mb-1 ${
+                  match.winner?.id === match.player1?.id ? 'bg-green-900/30 border border-green-600' : 'bg-gray-800'
+                }`}>
+                  <span className="text-white">{match.player1?.name || 'TBD'}</span>
+                  {match.player1Score !== undefined && (
+                    <span className="text-lg font-bold text-white">{match.player1Score}</span>
+                  )}
+                </div>
+                
+                {/* Player 2 */}
+                <div className={`flex items-center justify-between p-2 rounded ${
+                  match.winner?.id === match.player2?.id ? 'bg-green-900/30 border border-green-600' : 'bg-gray-800'
+                }`}>
+                  <span className="text-white">{match.player2?.name || 'TBD'}</span>
+                  {match.player2Score !== undefined && (
+                    <span className="text-lg font-bold text-white">{match.player2Score}</span>
+                  )}
+                </div>
+                
+                {match.completed && match.winner && (
+                  <div className="mt-2 text-sm text-green-400 text-center">
+                    Winner: {match.winner.name}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    );
   };
 
   if (knockoutMatches.length === 0) {
@@ -406,8 +435,10 @@ const KnockoutBracket: React.FC = () => {
       <div className="px-6 pb-6">
         <div className="bg-gray-800 rounded-lg border border-gray-600 overflow-x-auto">
           <div className="p-6">
-            {/* Brackets-viewer.js renders here */}
-            <div ref={bracketRef} className="brackets-viewer-container"></div>
+            {/* Custom Bracket Display */}
+            <div className="knockout-bracket-display">
+              {renderBracketByRound()}
+            </div>
             
             {/* Championship indicator */}
             {knockoutMatches.find(m => m.round === 'Final' && m.completed) && (
