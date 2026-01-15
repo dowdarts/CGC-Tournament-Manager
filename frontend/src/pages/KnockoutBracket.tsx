@@ -70,25 +70,56 @@ const KnockoutBracket: React.FC = () => {
         const savedTournament = localStorage.getItem('currentTournament');
         const savedKnockout = localStorage.getItem('knockoutBracket');
         
+        console.log('🔍 Loading knockout bracket data...');
+        console.log('Tournament data:', savedTournament);
+        console.log('Knockout data:', savedKnockout);
+        
         if (savedTournament) {
           setTournamentData(JSON.parse(savedTournament));
         }
         
         if (savedKnockout) {
           const matches = JSON.parse(savedKnockout);
+          console.log('✅ Loaded knockout bracket with', matches.length, 'matches');
           setKnockoutMatches(matches);
           extractParticipants(matches);
         } else {
+          console.log('ℹ️ No saved knockout bracket found, generating sample...');
           // Generate sample bracket for demonstration
           generateSampleBracket();
         }
       } catch (error) {
-        console.error('Error loading knockout data:', error);
+        console.error('❌ Error loading knockout data:', error);
         generateSampleBracket();
       }
     };
 
     loadKnockoutData();
+    
+    // Refresh data when tab becomes visible (when user navigates back)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('🔄 Tab visible, refreshing knockout bracket...');
+        setBracketInitialized(false); // Force re-initialization
+        loadKnockoutData();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Also listen for custom event from GroupStage when bracket is generated
+    const handleBracketUpdate = () => {
+      console.log('🔄 Received bracket update event');
+      setBracketInitialized(false);
+      loadKnockoutData();
+    };
+    
+    window.addEventListener('knockoutBracketUpdated', handleBracketUpdate);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('knockoutBracketUpdated', handleBracketUpdate);
+    };
   }, []);
 
   // Initialize brackets-viewer when data is ready

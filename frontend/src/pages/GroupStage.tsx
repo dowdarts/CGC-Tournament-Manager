@@ -249,13 +249,103 @@ const GroupStage: React.FC = () => {
     
     console.log('All advancing players by group:', advancingPlayersByGroup);
     
-    const bracket = generateKnockoutBracket(advancingPlayersByGroup);
-    setKnockoutBracket(bracket);
+    const firstRoundMatches = generateKnockoutBracket(advancingPlayersByGroup);
+    
+    // Generate complete bracket structure with all rounds
+    const totalPlayers = firstRoundMatches.length * 2;
+    const fullBracket = generateFullBracketStructure(firstRoundMatches, totalPlayers);
+    
+    setKnockoutBracket(fullBracket);
     setKnockoutGenerated(true);
     setShowKnockoutSetup(false);
     
-    // Here you would also save to database
-    console.log('Generated knockout bracket:', bracket);
+    // Save to localStorage for the Knockout Bracket tab to access
+    try {
+      localStorage.setItem('knockoutBracket', JSON.stringify(fullBracket));
+      localStorage.setItem('knockoutBracketTimestamp', Date.now().toString());
+      
+      // Also save tournament info
+      const tournamentInfo = {
+        id: tournamentId,
+        name: tournamentId,
+        totalPlayers,
+        advancingPlayers: firstRoundMatches.length * 2,
+        format: knockoutMatchFormat,
+        generatedAt: new Date().toISOString()
+      };
+      localStorage.setItem('currentTournament', JSON.stringify(tournamentInfo));
+      
+      // Dispatch event to notify KnockoutBracket component
+      window.dispatchEvent(new Event('knockoutBracketUpdated'));
+      
+      console.log('✅ Knockout bracket saved successfully:', fullBracket);
+      alert(`Knockout bracket generated! ${totalPlayers} players in ${fullBracket.length} matches. Go to the Knockout Bracket tab to view.`);
+    } catch (error) {
+      console.error('❌ Error saving knockout bracket:', error);
+      alert('Knockout bracket generated but failed to save. Please try again.');
+    }
+  };
+
+  // Generate complete bracket structure with all rounds (not just first round)
+  const generateFullBracketStructure = (firstRoundMatches: any[], totalPlayers: number) => {
+    const allMatches: any[] = [];
+    let matchCounter = 0;
+    let bracketPosition = 1;
+    
+    // Calculate number of rounds
+    const numRounds = Math.ceil(Math.log2(totalPlayers));
+    
+    // Round names based on bracket size
+    const getRoundName = (roundNumber: number, totalRounds: number) => {
+      const roundsFromEnd = totalRounds - roundNumber;
+      if (roundsFromEnd === 0) return 'Final';
+      if (roundsFromEnd === 1) return 'Semi-Final';
+      if (roundsFromEnd === 2) return 'Quarter-Final';
+      if (roundsFromEnd === 3) return 'Round of 16';
+      if (roundsFromEnd === 4) return 'Round of 32';
+      if (roundsFromEnd === 5) return 'Round of 64';
+      return `Round ${roundNumber}`;
+    };
+    
+    // Add first round matches with proper round names
+    firstRoundMatches.forEach((match, index) => {
+      allMatches.push({
+        ...match,
+        round: getRoundName(1, numRounds),
+        match: index + 1,
+        bracket_position: bracketPosition++,
+        completed: false,
+        player1Score: undefined,
+        player2Score: undefined,
+        winner: null
+      });
+    });
+    
+    // Generate subsequent rounds (empty matches that will be filled as tournament progresses)
+    let previousRoundMatches = firstRoundMatches.length;
+    for (let round = 2; round <= numRounds; round++) {
+      const matchesInRound = previousRoundMatches / 2;
+      
+      for (let i = 0; i < matchesInRound; i++) {
+        allMatches.push({
+          player1: null,
+          player2: null,
+          round: getRoundName(round, numRounds),
+          match: i + 1,
+          bracket_position: bracketPosition++,
+          completed: false,
+          player1Score: undefined,
+          player2Score: undefined,
+          winner: null,
+          overallSeed1: undefined,
+          overallSeed2: undefined
+        });
+      }
+      
+      previousRoundMatches = matchesInRound;
+    }
+    
+    return allMatches;
   };
 
   // Function to advance winner to next round
