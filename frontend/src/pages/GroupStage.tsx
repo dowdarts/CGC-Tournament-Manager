@@ -48,6 +48,8 @@ const GroupStage: React.FC = () => {
   const [updating, setUpdating] = useState(false);
   const [starting, setStarting] = useState(false);
   const [ending, setEnding] = useState(false);
+  const [draggedPlayerIndex, setDraggedPlayerIndex] = useState<{ groupId: string; index: number } | null>(null);
+  const [manualStandings, setManualStandings] = useState<{ [groupId: string]: any[] }>({});
   const [activeGroupTabs, setActiveGroupTabs] = useState<{ [groupId: string]: 'standings' | 'matches' }>({});
   const [scrollPosition, setScrollPosition] = useState(0);
   
@@ -813,11 +815,13 @@ const GroupStage: React.FC = () => {
                   });
                   setAdvancementCounts(counts);
                   
-                  // Generate bracket structure
+                  // Generate bracket structure using manual standings if available
                   const advancingPlayersByGroup: { [groupLetter: string]: Player[] } = {};
                   groupMatchData.forEach(groupData => {
                     const advancingCount = counts[groupData.groupId] || advanceCount;
-                    const advancingPlayers = groupData.standings
+                    // Use manual standings if they exist, otherwise use calculated standings
+                    const standings = manualStandings[groupData.groupId] || groupData.standings;
+                    const advancingPlayers = standings
                       .slice(0, advancingCount)
                       .map(standing => standing.player);
                     advancingPlayersByGroup[groupData.groupLetter] = advancingPlayers;
@@ -1353,6 +1357,21 @@ const GroupStage: React.FC = () => {
                 {/* Standings Tab Content */}
                 {currentTab === 'standings' && (
                   <div style={{ overflowX: 'auto' }}>
+                    <div style={{ 
+                      background: 'rgba(59, 130, 246, 0.1)', 
+                      border: '1px solid rgba(59, 130, 246, 0.3)',
+                      borderRadius: '6px',
+                      padding: '10px 15px',
+                      marginBottom: '15px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px'
+                    }}>
+                      <span style={{ fontSize: '16px' }}>ℹ️</span>
+                      <span style={{ fontSize: '13px', color: '#94a3b8' }}>
+                        <strong>Admin Override:</strong> Drag and drop players to manually adjust seeding before creating the knockout bracket
+                      </span>
+                    </div>
                     <table className="table" style={{ minWidth: '700px' }}>
                       <thead>
                         <tr>
@@ -1369,9 +1388,54 @@ const GroupStage: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {groupData.standings.map((standing, index) => (
-                          <tr key={standing.player.id}>
-                            <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{index + 1}</td>
+                        {(manualStandings[groupData.groupId] || groupData.standings).map((standing, index) => (
+                          <tr 
+                            key={standing.player.id}
+                            draggable={true}
+                            onDragStart={(e) => {
+                              setDraggedPlayerIndex({ groupId: groupData.groupId, index });
+                              e.currentTarget.style.opacity = '0.5';
+                            }}
+                            onDragEnd={(e) => {
+                              e.currentTarget.style.opacity = '1';
+                              setDraggedPlayerIndex(null);
+                            }}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
+                            }}
+                            onDragLeave={(e) => {
+                              e.currentTarget.style.background = '';
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              e.currentTarget.style.background = '';
+                              
+                              if (draggedPlayerIndex && draggedPlayerIndex.groupId === groupData.groupId) {
+                                const currentStandings = manualStandings[groupData.groupId] || [...groupData.standings];
+                                const newStandings = [...currentStandings];
+                                const draggedItem = newStandings[draggedPlayerIndex.index];
+                                newStandings.splice(draggedPlayerIndex.index, 1);
+                                newStandings.splice(index, 0, draggedItem);
+                                
+                                setManualStandings({
+                                  ...manualStandings,
+                                  [groupData.groupId]: newStandings
+                                });
+                              }
+                            }}
+                            style={{ 
+                              cursor: 'move',
+                              transition: 'all 0.2s',
+                              userSelect: 'none'
+                            }}
+                          >
+                            <td style={{ textAlign: 'center', fontWeight: 'bold' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                                <span style={{ color: '#64748b', fontSize: '18px' }}>⋮⋮</span>
+                                {index + 1}
+                              </div>
+                            </td>
                             <td>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 {standing.player.name}
