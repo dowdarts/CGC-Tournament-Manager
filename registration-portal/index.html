@@ -13,35 +13,40 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
       min-height: 100vh;
       padding: 20px;
       color: #fff;
     }
 
     .container {
-      max-width: 800px;
+      max-width: 900px;
       margin: 0 auto;
     }
 
     .header {
       text-align: center;
       margin-bottom: 40px;
-      padding: 30px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 20px;
+      padding: 40px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 24px;
       backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
     }
 
     .header img {
-      height: 80px;
-      width: auto;
-      margin-bottom: 15px;
+      max-width: 100%;
+      height: auto;
+      max-height: 120px;
+      margin-bottom: 20px;
+      filter: drop-shadow(0 4px 20px rgba(102, 126, 234, 0.4));
     }
 
     .header h1 {
       font-size: 48px;
       margin-bottom: 10px;
+      text-shadow: 0 2px 20px rgba(102, 126, 234, 0.5);
     }
 
     .header p {
@@ -50,48 +55,84 @@
     }
 
     .card {
-      background: rgba(255, 255, 255, 0.95);
-      color: #1e293b;
-      border-radius: 20px;
-      padding: 30px;
+      background: rgba(30, 41, 59, 0.8);
+      color: #e2e8f0;
+      border-radius: 24px;
+      padding: 35px;
       margin-bottom: 20px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
     }
 
     .tournament-list {
       display: grid;
-      gap: 15px;
+      gap: 20px;
     }
 
     .tournament-item {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.9) 0%, rgba(118, 75, 162, 0.9) 100%);
       color: white;
-      padding: 25px;
-      border-radius: 15px;
+      padding: 30px;
+      border-radius: 20px;
       cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-      border: none;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 2px solid transparent;
       text-align: left;
       width: 100%;
       font-size: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tournament-item::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 100%);
+      opacity: 0;
+      transition: opacity 0.3s;
     }
 
     .tournament-item:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+      transform: translateY(-8px) scale(1.02);
+      box-shadow: 0 20px 50px rgba(102, 126, 234, 0.6), 0 0 0 3px rgba(255, 255, 255, 0.3);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+
+    .tournament-item:hover::before {
+      opacity: 1;
+    }
+
+    .tournament-item:active {
+      transform: translateY(-4px) scale(1.01);
     }
 
     .tournament-item h3 {
-      font-size: 28px;
-      margin-bottom: 10px;
+      font-size: 32px;
+      margin-bottom: 15px;
+      font-weight: 700;
+      position: relative;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
     }
 
     .tournament-item .meta {
-      opacity: 0.9;
-      font-size: 16px;
+      opacity: 0.95;
+      font-size: 18px;
       display: flex;
-      gap: 20px;
+      gap: 25px;
       flex-wrap: wrap;
+      position: relative;
+    }
+
+    .tournament-item .meta span {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 8px 16px;
+      border-radius: 10px;
+      backdrop-filter: blur(5px);
     }
 
     .form-group {
@@ -101,50 +142,86 @@
     .form-label {
       display: block;
       font-weight: 600;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
       font-size: 18px;
-      color: #334155;
+      color: #e2e8f0;
     }
 
     .input {
       width: 100%;
-      padding: 15px;
-      border: 2px solid #e2e8f0;
-      border-radius: 10px;
+      padding: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      background: rgba(15, 23, 42, 0.6);
+      color: #e2e8f0;
+      border-radius: 12px;
       font-size: 18px;
-      transition: border-color 0.2s;
+      transition: all 0.3s;
+    }
+
+    .input::placeholder {
+      color: #94a3b8;
     }
 
     .input:focus {
       outline: none;
       border-color: #667eea;
+      background: rgba(15, 23, 42, 0.8);
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
     }
 
     .button {
       width: 100%;
       padding: 18px;
       font-size: 20px;
-      font-weight: 600;
+      font-weight: 700;
       border: none;
-      border-radius: 10px;
+      border-radius: 14px;
       cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .button::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    .button:hover::before {
+      width: 300px;
+      height: 300px;
     }
 
     .button-primary {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .button-primary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
     }
 
     .button-secondary {
-      background: #64748b;
+      background: rgba(100, 116, 139, 0.8);
       color: white;
       margin-top: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
-    .button:hover {
+    .button-secondary:hover {
       transform: translateY(-2px);
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      background: rgba(100, 116, 139, 1);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
     }
 
     .button:disabled {
@@ -153,36 +230,51 @@
       transform: none;
     }
 
+    .button:disabled:hover {
+      transform: none;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
     .alert {
-      padding: 15px 20px;
-      border-radius: 10px;
+      padding: 18px 24px;
+      border-radius: 14px;
       margin-bottom: 20px;
-      font-size: 16px;
+      font-size: 17px;
+      font-weight: 600;
+      border: 2px solid;
+      backdrop-filter: blur(10px);
     }
 
     .alert-success {
-      background: #10b981;
+      background: rgba(16, 185, 129, 0.9);
       color: white;
+      border-color: rgba(16, 185, 129, 1);
+      box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
     }
 
     .alert-error {
-      background: #ef4444;
+      background: rgba(239, 68, 68, 0.9);
       color: white;
+      border-color: rgba(239, 68, 68, 1);
+      box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4);
     }
 
     .alert-info {
-      background: #3b82f6;
+      background: rgba(59, 130, 246, 0.9);
       color: white;
+      border-color: rgba(59, 130, 246, 1);
+      box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
     }
 
     .loading {
       text-align: center;
-      padding: 60px;
-      font-size: 20px;
+      padding: 80px;
+      font-size: 22px;
+      color: #94a3b8;
     }
 
     .section-divider {
-      border-top: 2px solid #e2e8f0;
+      border-top: 2px solid rgba(255, 255, 255, 0.1);
       margin: 30px 0;
       padding-top: 30px;
     }
@@ -192,12 +284,13 @@
     }
 
     .player-section h4 {
-      font-size: 22px;
-      margin-bottom: 15px;
-      color: #334155;
+      font-size: 24px;
+      margin-bottom: 18px;
+      color: #e2e8f0;
       display: flex;
       align-items: center;
       gap: 10px;
+      font-weight: 700;
     }
 
     .hidden {
@@ -206,13 +299,29 @@
 
     .empty-state {
       text-align: center;
-      padding: 60px 20px;
-      color: #64748b;
+      padding: 80px 20px;
+      color: #94a3b8;
     }
 
     .empty-state h3 {
-      font-size: 24px;
-      margin-bottom: 10px;
+      font-size: 28px;
+      margin-bottom: 12px;
+      color: #cbd5e1;
+    }
+
+    .card-title {
+      margin-bottom: 25px;
+      font-size: 32px;
+      font-weight: 700;
+      color: #e2e8f0;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .help-text {
+      text-align: center;
+      margin-top: 20px;
+      color: #94a3b8;
+      font-size: 14px;
     }
   </style>
 </head>
@@ -226,7 +335,7 @@
 
     <!-- Events Lobby -->
     <div id="lobby-view" class="card">
-      <h2 style="margin-bottom: 20px; font-size: 32px;">Active Tournaments</h2>
+      <h2 class="card-title">Active Tournaments</h2>
       <div id="tournament-list" class="tournament-list"></div>
       <div id="empty-state" class="empty-state hidden">
         <h3>No Active Tournaments</h3>
@@ -311,7 +420,7 @@
           </button>
         </form>
 
-        <p style="text-align: center; margin-top: 20px; color: #64748b; font-size: 14px;">
+        <p class="help-text">
           Having trouble? Please see the tournament desk
         </p>
       </div>
