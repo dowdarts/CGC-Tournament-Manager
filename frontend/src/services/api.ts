@@ -32,6 +32,13 @@ export const TournamentService = {
   },
 
   async updateTournament(id: string, updates: Partial<Tournament>) {
+    // Prevent changing game_type after tournament creation
+    // This could corrupt data (singles vs doubles have different structures)
+    if (updates.game_type !== undefined) {
+      console.warn('Attempting to change game_type - this is not allowed after tournament creation');
+      delete updates.game_type;
+    }
+    
     const { data, error } = await supabase
       .from('tournaments')
       .update(updates)

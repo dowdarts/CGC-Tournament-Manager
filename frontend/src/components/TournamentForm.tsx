@@ -4,6 +4,8 @@ import { Tournament } from '@/types';
 interface TournamentFormProps {
   onSubmit: (tournament: Omit<Tournament, 'id' | 'createdAt' | 'updatedAt'>) => void;
   isLoading?: boolean;
+  isEditing?: boolean;
+  existingTournament?: Tournament;
 }
 
 const TournamentForm: React.FC<TournamentFormProps> = ({ onSubmit, isLoading = false }) => {
@@ -89,10 +91,21 @@ const TournamentForm: React.FC<TournamentFormProps> = ({ onSubmit, isLoading = f
 
       <div className="form-group">
         <label className="form-label">Game Type</label>
-        <select name="game_type" value={formData.game_type} onChange={handleChange} className="input">
+        <select 
+          name="game_type" 
+          value={formData.game_type} 
+          onChange={handleChange} 
+          className="input"
+          disabled={isEditing}
+        >
           <option value="singles">Singles</option>
           <option value="doubles">Doubles (Teams of 2)</option>
         </select>
+        {isEditing && (
+          <p style={{ marginTop: '5px', fontSize: '12px', color: '#f59e0b', fontStyle: 'italic' }}>
+            ⚠️ Game type cannot be changed after tournament creation
+          </p>
+        )}
       </div>
 
       <div className="form-group">
