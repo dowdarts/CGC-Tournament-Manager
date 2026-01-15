@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { TournamentService, PlayerService, GroupService, MatchService } from '@/services/api';
-import { Player, Tournament, Group } from '@/types';
+import { TournamentService, PlayerService, GroupService, MatchService, BoardService } from '@/services/api';
+import { Player, Tournament, Group, Board } from '@/types';
 import GroupConfiguration from '@/components/GroupConfiguration';
 import MatchFormatModal from '@/components/MatchFormatModal';
 import { Users, Trash2, Shuffle, Grid, Play } from 'lucide-react';
@@ -24,6 +24,9 @@ const RegistrationList: React.FC = () => {
   const [generating, setGenerating] = useState(false);
   const [showFormatModal, setShowFormatModal] = useState(false);
   const [advancementCount, setAdvancementCount] = useState(2);
+  const [boards, setBoards] = useState<Board[]>([]);
+  const [newBoardCount, setNewBoardCount] = useState(1);
+  const [boardGroupAssignments, setBoardGroupAssignments] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadData();
@@ -33,10 +36,11 @@ const RegistrationList: React.FC = () => {
     if (!id) return;
     try {
       setLoading(true);
-      const [playersData, tournamentData, groupsData] = await Promise.all([
+      const [playersData, tournamentData, groupsData, boardsData] = await Promise.all([
         PlayerService.getPlayers(id),
         TournamentService.getTournament(id),
-        GroupService.getGroups(id)
+        GroupService.getGroups(id),
+        BoardService.getBoards(id)
       ]);
       // Filter for paid players only and sort by seed_ranking
       const paidPlayers = playersData.filter(p => p.paid);
@@ -44,6 +48,20 @@ const RegistrationList: React.FC = () => {
       setPlayers(paidPlayers);
       setTournament(tournamentData);
       setGroups(groupsData);
+      setBoards(boardsData);
+      
+      // Load board assignments from localStorage
+      const savedAssignments = localStorage.getItem(`board-assignments-${id}`);
+      if (savedAssignments) {
+        setBoardGroupAssignments(JSON.parse(savedAssignments));
+      } else {
+        // Initialize empty assignments for existing boards
+        const assignments: Record<string, string> = {};
+        boardsData.forEach(board => {
+          assignments[board.id] = '';
+        });
+        setBoardGroupAssignments(assignments);
+      }
     } catch (err) {
       setError('Failed to load registration list');
       console.error(err);
@@ -154,7 +172,43 @@ const RegistrationList: React.FC = () => {
       setGenerating(false);
     }
   };
+  const handleAddBoards = async () => {
+    if (!id || newBoardCount < 1) return;
+    
+    try {
+      await BoardService.createBoards(id, newBoardCount);
+      setNewBoardCount(1);
+      await loadData();
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 1500);
+    } catch (error) {
+      console.error('Error creating boards:', error);
+      setError('Failed to create boards');
+    }
+  };
 
+  const handleBoardAssignment = (boardId: string, groupId: string) => {
+    setBoardGroupAssignments(prev => ({
+      ...prev,
+      [boardId]: groupId
+    }));
+  };
+
+  const saveBoardAssignments = async () => {
+    if (!id) return;
+    try {
+      localStorage.setItem(`board-assignments-${id}`, JSON.stringify(boardGroupAssignments));
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 1500);
+    } catch (error) {
+      console.error('Error saving assignments:', error);
+      setError('Failed to save board assignments');
+    }
+  };
+
+  const getGroupBoardCount = (groupId: string): number => {
+    return Object.values(boardGroupAssignments).filter(gId => gId === groupId).length;
+  };
   const handleGenerateGroupStage = () => {
     // Show format modal instead of generating immediately
     setShowFormatModal(true);
@@ -650,6 +704,128 @@ const RegistrationList: React.FC = () => {
             </div>
           )}
 
+          {/* Board Management Section - Only show after groups are generated */}
+          {groups.length > 0 && !tournament.group_stage_created && (
+            <div className="card" style={{ marginTop: '20px', background: '#f0f9ff', border: '2px solid #3b82f6' }}>
+              <h3 style={{ marginBottom: '15px', color: '#1e40af', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Grid size={20} />
+                Board Assignment
+              </h3>
+              <p style={{ color: '#1e40af', marginBottom: '20px', fontSize: '14px' }}>
+                Assign boards to groups before generating matches. The system will use balanced board rotation for fair play.
+              </p>
+
+              {/* Add Boards */}
+              <div style={{ marginBottom: '20px', padding: '15px', background: '#fff', borderRadius: '8px' }}>
+                <h4 style={{ marginBottom: '10px', fontSize: '14px' }}>Add Boards</h4>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
+                  <div style={{ flex: '0 0 150px' }}>
+                    <input
+                      type="number"
+                      className="input"
+                      min="1"
+                      max="20"
+                      value={newBoardCount}
+                      onChange={(e) => setNewBoardCount(parseInt(e.target.value) || 1)}
+                      placeholder="Number of boards"
+                    />
+                  </div>
+                  <button className="button button-primary" onClick={handleAddBoards}>
+                    <Grid size={16} />
+                    Add {newBoardCount} Board{newBoardCount !== 1 ? 's' : ''}
+                  </button>
+                  <div style={{ marginLeft: 'auto', color: '#64748b', fontSize: '14px' }}>
+                    Total boards: <strong>{boards.length}</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Board Assignment Table */}
+              {boards.length > 0 && (
+                <div style={{ marginBottom: '15px' }}>
+                  <h4 style={{ marginBottom: '10px', fontSize: '14px', color: '#1e40af' }}>
+                    Assign Boards to Groups
+                  </h4>
+                  
+                  {/* Group Summary */}
+                  <div style={{ marginBottom: '15px', padding: '10px', background: '#dbeafe', borderRadius: '4px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px' }}>
+                      {groups.map(group => (
+                        <div key={group.id} style={{ fontSize: '13px' }}>
+                          <strong>{group.name}:</strong> {getGroupBoardCount(group.id)} board{getGroupBoardCount(group.id) !== 1 ? 's' : ''}
+                          <span style={{ color: '#64748b', marginLeft: '4px' }}>
+                            ({group.player_ids.length} players)
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Board List */}
+                  <div style={{ overflowX: 'auto' }}>
+                    <table className="table" style={{ fontSize: '14px' }}>
+                      <thead>
+                        <tr>
+                          <th style={{ width: '120px' }}>Board</th>
+                          <th>Assigned Group</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {boards.map(board => (
+                          <tr key={board.id}>
+                            <td style={{ fontWeight: 'bold' }}>Board {board.board_number}</td>
+                            <td>
+                              <select
+                                className="input"
+                                value={boardGroupAssignments[board.id] || ''}
+                                onChange={(e) => handleBoardAssignment(board.id, e.target.value)}
+                                style={{ maxWidth: '300px', padding: '6px' }}
+                              >
+                                <option value="">Unassigned</option>
+                                {groups.map(group => (
+                                  <option key={group.id} value={group.id}>
+                                    {group.name} ({group.player_ids.length} players)
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <button
+                    className="button button-primary"
+                    onClick={saveBoardAssignments}
+                    style={{ marginTop: '10px' }}
+                  >
+                    Save Board Assignments
+                  </button>
+                </div>
+              )}
+
+              {boards.length === 0 && (
+                <div style={{ padding: '20px', textAlign: 'center', background: '#fff', borderRadius: '8px' }}>
+                  <p style={{ color: '#64748b', fontSize: '14px' }}>
+                    No boards created yet. Add boards above to assign them to groups.
+                  </p>
+                </div>
+              )}
+
+              {/* Guidelines */}
+              <div style={{ padding: '12px', background: '#dbeafe', borderRadius: '4px', fontSize: '13px', color: '#1e40af' }}>
+                <strong>💡 Board Assignment Tips:</strong>
+                <ul style={{ marginLeft: '20px', marginTop: '8px', marginBottom: '0' }}>
+                  <li>Small groups (2-3 players): 1 board recommended</li>
+                  <li>Medium groups (4-6 players): 2 boards recommended</li>
+                  <li>Large groups (7+ players): {Math.floor(7/2)} or more boards recommended</li>
+                  <li>System uses balanced rotation: (matchIndex + round) mod Boards + 1</li>
+                </ul>
+              </div>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="card" style={{ marginTop: '20px' }}>
             <h3 style={{ marginBottom: '15px' }}>Group Configuration Actions</h3>
@@ -703,7 +879,8 @@ const RegistrationList: React.FC = () => {
 
             {tournament.groups_generated && !tournament.group_stage_created && (
               <p style={{ color: '#34d399', marginTop: '15px', fontSize: '14px' }}>
-                ✅ Groups ready! Click "Generate Group Stage" to create matches
+                ✅ Groups ready! {boards.length > 0 ? 'Assign boards above, then click' : 'Click'} "Generate Group Stage" to create matches
+                {boards.length === 0 && ' (boards are optional - system will auto-calculate if not assigned)'}
               </p>
             )}
           </div>
