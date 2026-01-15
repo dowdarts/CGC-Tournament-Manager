@@ -813,9 +813,24 @@ const GroupStage: React.FC = () => {
                   });
                   setAdvancementCounts(counts);
                   
+                  // Generate bracket structure
+                  const advancingPlayersByGroup: { [groupLetter: string]: Player[] } = {};
+                  groupMatchData.forEach(groupData => {
+                    const advancingCount = counts[groupData.groupId] || advanceCount;
+                    const advancingPlayers = groupData.standings
+                      .slice(0, advancingCount)
+                      .map(standing => standing.player);
+                    advancingPlayersByGroup[groupData.groupLetter] = advancingPlayers;
+                  });
+                  
+                  const firstRoundMatches = generateKnockoutBracket(advancingPlayersByGroup);
+                  const totalPlayers = firstRoundMatches.length * 2;
+                  const fullBracket = generateFullBracketStructure(firstRoundMatches, totalPlayers);
+                  
                   // Save to localStorage for Knockout tab to use
                   localStorage.setItem('knockoutAdvancementCount', advanceCount.toString());
                   localStorage.setItem('knockoutAdvancementCounts', JSON.stringify(counts));
+                  localStorage.setItem('knockoutBracket', JSON.stringify(fullBracket));
                   
                   // Navigate to Knockout Bracket tab
                   window.location.hash = '#/tournament/' + id + '/knockout';
