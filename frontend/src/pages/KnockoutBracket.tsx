@@ -98,7 +98,8 @@ const KnockoutBracket: React.FC = () => {
         player2_score: null,
         winner_id: null,
         completed: false,
-        group_id: null // Null for knockout matches\n      }));
+        group_id: null // Null for knockout matches
+      }));
       
       // Create matches in database
       const { data: createdMatches, error } = await supabase
