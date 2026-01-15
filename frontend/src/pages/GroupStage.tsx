@@ -272,8 +272,7 @@ const GroupStage: React.FC = () => {
         player2_score: null,
         winner_id: null,
         completed: false,
-        match_type: 'knockout',
-        round_name: match.round
+        group_id: null // Null for knockout matches to distinguish from group stage
       }));
       
       // Create matches in database
@@ -297,7 +296,12 @@ const GroupStage: React.FC = () => {
       setShowKnockoutSetup(false);
       setKnockoutStarted(true);
       
-      // Save to localStorage for the Knockout Bracket tab to access
+      // Save round names to localStorage for display
+      const roundNamesMap: { [key: number]: string } = {};
+      fullBracket.forEach((match, index) => {
+        roundNamesMap[index + 1] = match.round;
+      });
+      localStorage.setItem('knockoutRoundNames', JSON.stringify(roundNamesMap));
       localStorage.setItem('knockoutBracket', JSON.stringify(fullBracket));
       localStorage.setItem('knockoutBracketTimestamp', Date.now().toString());
       

@@ -43,14 +43,24 @@ const KnockoutBracket: React.FC = () => {
           winner:players!matches_winner_id_fkey(id, name)
         `)
         .eq('tournament_id', id)
-        .eq('match_type', 'knockout')
+        .is('group_id', null)
         .order('round', { ascending: true })
         .order('board_number', { ascending: true });
       
       if (error) throw error;
       
-      console.log('📦 Loaded knockout matches from database:', matches);
-      setKnockoutMatches(matches || []);
+      // Load round names from localStorage
+      const roundNamesJson = localStorage.getItem('knockoutRoundNames');
+      const roundNames = roundNamesJson ? JSON.parse(roundNamesJson) : {};
+      
+      // Map round names to matches
+      const matchesWithRoundNames = (matches || []).map(match => ({
+        ...match,
+        round_name: roundNames[match.round] || `Round ${match.round}`
+      }));
+      
+      console.log('📦 Loaded knockout matches from database:', matchesWithRoundNames);
+      setKnockoutMatches(matchesWithRoundNames);
     } catch (error) {
       console.error('❌ Error loading knockout matches:', error);
       setKnockoutMatches([]);
@@ -133,7 +143,7 @@ const KnockoutBracket: React.FC = () => {
       .from('matches')
       .select('*')
       .eq('tournament_id', id)
-      .eq('match_type', 'knockout')
+      .is('group_id', null)
       .eq('round', currentRound + 1)
       .eq('board_number', nextMatchPosition);
     
