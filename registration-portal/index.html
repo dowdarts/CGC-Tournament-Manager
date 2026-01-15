@@ -434,10 +434,45 @@
       }
 
       submitButton.disabled = true;
-      submitButton.textContent = 'Registering...';
+      submitButton.textContent = 'Checking...';
       hideMessages();
 
       try {
+        const checkDuplicate = async (name, email) => {
+          let query = supabaseClient
+            .from('players')
+            .select('id')
+            .eq('tournament_id', selectedTournament.id)
+            .eq('name', name);
+          
+          if (email) {
+            query = query.eq('email', email);
+          }
+          
+          const { data, error } = await query;
+          return data && data.length > 0;
+        };
+
+        const player1Exists = await checkDuplicate(player1Name, player1Email);
+        if (player1Exists) {
+          showError(`${player1Name} is already registered for this tournament!`);
+          submitButton.disabled = false;
+          submitButton.textContent = isDoubles ? 'Register Team' : 'Register';
+          return;
+        }
+
+        if (isDoubles) {
+          const player2Exists = await checkDuplicate(player2Name, player2Email);
+          if (player2Exists) {
+            showError(`${player2Name} is already registered for this tournament!`);
+            submitButton.disabled = false;
+            submitButton.textContent = 'Register Team';
+            return;
+          }
+        }
+
+        submitButton.textContent = 'Registering...';
+
         const teamId = isDoubles ? crypto.randomUUID() : null;
 
         const players = [{
