@@ -7,7 +7,9 @@ ALTER TABLE tournaments
 ADD COLUMN IF NOT EXISTS setup_completed BOOLEAN DEFAULT FALSE,
 ADD COLUMN IF NOT EXISTS participants_confirmed BOOLEAN DEFAULT FALSE,
 ADD COLUMN IF NOT EXISTS groups_generated BOOLEAN DEFAULT FALSE,
-ADD COLUMN IF NOT EXISTS group_stage_created BOOLEAN DEFAULT FALSE;
+ADD COLUMN IF NOT EXISTS group_stage_created BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS group_stage_started BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS group_stage_completed BOOLEAN DEFAULT FALSE;
 
 -- Add scoring system configuration column to tournaments
 ALTER TABLE tournaments
@@ -28,6 +30,8 @@ COMMENT ON COLUMN tournaments.setup_completed IS 'True when basic info and scori
 COMMENT ON COLUMN tournaments.participants_confirmed IS 'True when participant list is confirmed and ready for group generation';
 COMMENT ON COLUMN tournaments.groups_generated IS 'True when groups have been created and assigned';
 COMMENT ON COLUMN tournaments.group_stage_created IS 'True when group stage matches have been generated';
+COMMENT ON COLUMN tournaments.group_stage_started IS 'True when group stage has been started (locks player movement)';
+COMMENT ON COLUMN tournaments.group_stage_completed IS 'True when all group stage matches are completed and standings finalized';
 COMMENT ON COLUMN tournaments.scoring_system IS 'JSON configuration for tournament scoring: primary_metric (match_wins|leg_wins|tournament_points), roundrobin_format/knockout_format (matchplay|set_play), legs/sets configuration for each stage, points system, and tiebreaker order';
 
 -- Alter existing matches table to add new columns

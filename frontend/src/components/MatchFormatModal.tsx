@@ -24,7 +24,7 @@ const MatchFormatModal = ({
 }: MatchFormatModalProps) => {
   const [matchFormat, setMatchFormat] = useState<'matchplay' | 'set_play'>('matchplay');
   const [playStyle, setPlayStyle] = useState<'play_all' | 'best_of'>('best_of');
-  const [legsPerMatch, setLegsPerMatch] = useState(11);
+  const [legsPerMatch, setLegsPerMatch] = useState(3);
   const [legsPerSet, setLegsPerSet] = useState(3);
   const [setsPerMatch, setSetsPerMatch] = useState(5);
 
@@ -141,13 +141,11 @@ const MatchFormatModal = ({
                   type="number"
                   value={legsPerMatch}
                   onChange={(e) => {
-                    const value = parseInt(e.target.value);
-                    if (!isNaN(value) && value > 0) {
-                      setLegsPerMatch(value);
-                    }
+                    const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                    setLegsPerMatch(value);
                   }}
                   className="input"
-                  min="1"
+                  min="0"
                   style={{ maxWidth: '200px' }}
                 />
               </div>
@@ -189,13 +187,11 @@ const MatchFormatModal = ({
                   type="number"
                   value={legsPerSet}
                   onChange={(e) => {
-                    const value = parseInt(e.target.value);
-                    if (!isNaN(value) && value > 0) {
-                      setLegsPerSet(value);
-                    }
+                    const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                    setLegsPerSet(value);
                   }}
                   className="input"
-                  min="1"
+                  min="0"
                 />
               </div>
               <div className="form-group">
@@ -204,13 +200,11 @@ const MatchFormatModal = ({
                   type="number"
                   value={setsPerMatch}
                   onChange={(e) => {
-                    const value = parseInt(e.target.value);
-                    if (!isNaN(value) && value > 0) {
-                      setSetsPerMatch(value);
-                    }
+                    const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                    setSetsPerMatch(value);
                   }}
                   className="input"
-                  min="1"
+                  min="0"
                 />
                 <p style={{ fontSize: '14px', color: '#94a3b8', marginTop: '5px' }}>
                   First to {Math.ceil(setsPerMatch / 2)} sets wins

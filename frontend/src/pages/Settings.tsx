@@ -205,7 +205,7 @@ const Settings: React.FC = () => {
               <input
                 type="number"
                 value={pointsForWin}
-                onChange={(e) => setPointsForWin(parseInt(e.target.value))}
+                onChange={(e) => setPointsForWin(e.target.value === '' ? 0 : parseInt(e.target.value))}
                 className="input"
                 min="0"
               />
@@ -215,7 +215,7 @@ const Settings: React.FC = () => {
               <input
                 type="number"
                 value={pointsForDraw}
-                onChange={(e) => setPointsForDraw(parseInt(e.target.value))}
+                onChange={(e) => setPointsForDraw(e.target.value === '' ? 0 : parseInt(e.target.value))}
                 className="input"
                 min="0"
               />
@@ -225,7 +225,7 @@ const Settings: React.FC = () => {
               <input
                 type="number"
                 value={pointsForLoss}
-                onChange={(e) => setPointsForLoss(parseInt(e.target.value))}
+                onChange={(e) => setPointsForLoss(e.target.value === '' ? 0 : parseInt(e.target.value))}
                 className="input"
                 min="0"
               />

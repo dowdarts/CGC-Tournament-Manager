@@ -125,6 +125,7 @@ const TournamentLayout: React.FC<TournamentLayoutProps> = ({ children }) => {
     { path: `/tournament/${id}/groups`, label: 'Group Stage', icon: '🎯', tooltip: 'Run the group stage matches and track scores for round-robin play' },
     { path: `/tournament/${id}/boards`, label: 'Board Manager', icon: '🎲', tooltip: 'Manage dartboards and assign matches to specific board numbers' },
     { path: `/tournament/${id}/bracket`, label: 'Knockout Bracket', icon: '🏆', tooltip: 'View and manage the knockout bracket for playoff rounds' },
+    { path: `/tournament/${id}/paycal`, label: 'Paycal', icon: '💰', tooltip: 'Calculate and manage tournament prize distributions and player payouts' },
     { path: `/tournament/${id}/analytics`, label: 'Analytics', icon: '📊', tooltip: 'View tournament statistics, player performance, and match analytics' },
   ];
 

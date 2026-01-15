@@ -92,6 +92,31 @@ const BasicInfo: React.FC = () => {
     setSuccess(false);
   };
 
+  // Set default tiebreakers based on scoring system
+  const handleScoringSystemChange = (newMetric: 'match_wins' | 'leg_wins' | 'tournament_points') => {
+    setPrimaryMetric(newMetric);
+    
+    // Set default tiebreakers based on scoring system
+    let defaultTiebreakers: ('leg_difference' | 'head_to_head' | 'legs_won' | 'legs_lost' | 'match_wins')[] = [];
+    
+    switch (newMetric) {
+      case 'match_wins':
+        // For match wins: legs won, then head-to-head, then leg difference
+        defaultTiebreakers = ['legs_won', 'head_to_head', 'leg_difference'];
+        break;
+      case 'leg_wins':
+        // For leg wins: leg difference, then head-to-head, then match wins
+        defaultTiebreakers = ['leg_difference', 'head_to_head', 'match_wins'];
+        break;
+      case 'tournament_points':
+        // For tournament points: legs won, then leg difference, then head-to-head, then match wins
+        defaultTiebreakers = ['legs_won', 'leg_difference', 'head_to_head', 'match_wins'];
+        break;
+    }
+    
+    setTiebreakOrder(defaultTiebreakers);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -341,7 +366,7 @@ const BasicInfo: React.FC = () => {
                 type="radio"
                 value="match_wins"
                 checked={primaryMetric === 'match_wins'}
-                onChange={(e) => setPrimaryMetric(e.target.value as any)}
+                onChange={(e) => handleScoringSystemChange(e.target.value as any)}
                 style={{ marginRight: '10px' }}
               />
               <strong>Match Wins</strong> - Players ranked by total matches won
@@ -352,7 +377,7 @@ const BasicInfo: React.FC = () => {
                 type="radio"
                 value="leg_wins"
                 checked={primaryMetric === 'leg_wins'}
-                onChange={(e) => setPrimaryMetric(e.target.value as any)}
+                onChange={(e) => handleScoringSystemChange(e.target.value as any)}
                 style={{ marginRight: '10px' }}
               />
               <strong>Leg Wins</strong> - Players ranked by total legs won
@@ -363,7 +388,7 @@ const BasicInfo: React.FC = () => {
                 type="radio"
                 value="tournament_points"
                 checked={primaryMetric === 'tournament_points'}
-                onChange={(e) => setPrimaryMetric(e.target.value as any)}
+                onChange={(e) => handleScoringSystemChange(e.target.value as any)}
                 style={{ marginRight: '10px' }}
               />
               <strong>Tournament Points</strong> - Points awarded per match result
@@ -381,7 +406,7 @@ const BasicInfo: React.FC = () => {
                 <input
                   type="number"
                   value={pointsForWin}
-                  onChange={(e) => setPointsForWin(parseInt(e.target.value))}
+                  onChange={(e) => setPointsForWin(e.target.value === '' ? 0 : parseInt(e.target.value))}
                   className="input"
                   min="0"
                 />
@@ -391,7 +416,7 @@ const BasicInfo: React.FC = () => {
                 <input
                   type="number"
                   value={pointsForDraw}
-                  onChange={(e) => setPointsForDraw(parseInt(e.target.value))}
+                  onChange={(e) => setPointsForDraw(e.target.value === '' ? 0 : parseInt(e.target.value))}
                   className="input"
                   min="0"
                 />
@@ -401,7 +426,7 @@ const BasicInfo: React.FC = () => {
                 <input
                   type="number"
                   value={pointsForLoss}
-                  onChange={(e) => setPointsForLoss(parseInt(e.target.value))}
+                  onChange={(e) => setPointsForLoss(e.target.value === '' ? 0 : parseInt(e.target.value))}
                   className="input"
                   min="0"
                 />

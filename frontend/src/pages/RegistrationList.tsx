@@ -25,8 +25,10 @@ const RegistrationList: React.FC = () => {
   const [showFormatModal, setShowFormatModal] = useState(false);
   const [advancementCount, setAdvancementCount] = useState(2);
   const [boards, setBoards] = useState<Board[]>([]);
-  const [newBoardCount, setNewBoardCount] = useState(1);
+  const [newBoardCount, setNewBoardCount] = useState(0);
   const [boardGroupAssignments, setBoardGroupAssignments] = useState<Record<string, string>>({});
+  const [draggedPlayer, setDraggedPlayer] = useState<Player | null>(null);
+  const [dragOverPlayer, setDragOverPlayer] = useState<Player | null>(null);
 
   useEffect(() => {
     loadData();
@@ -172,12 +174,94 @@ const RegistrationList: React.FC = () => {
       setGenerating(false);
     }
   };
+
+  const handleDragStart = (e: React.DragEvent, player: Player) => {
+    setDraggedPlayer(player);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, targetPlayer: Player) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverPlayer(targetPlayer);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverPlayer(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetPlayer: Player) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverPlayer(null);
+    
+    if (!draggedPlayer || draggedPlayer.id === targetPlayer.id || !tournament) {
+      setDraggedPlayer(null);
+      return;
+    }
+
+    // Find source and target groups
+    const sourceGroup = groups.find(g => g.player_ids.includes(draggedPlayer.id));
+    const targetGroup = groups.find(g => g.player_ids.includes(targetPlayer.id));
+
+    if (!sourceGroup || !targetGroup) {
+      setDraggedPlayer(null);
+      return;
+    }
+
+    try {
+      // Swap players between groups AND their seed rankings
+      const sourcePlayerIds = [...sourceGroup.player_ids];
+      const targetPlayerIds = [...targetGroup.player_ids];
+
+      // Find indices
+      const sourceIndex = sourcePlayerIds.indexOf(draggedPlayer.id);
+      const targetIndex = targetPlayerIds.indexOf(targetPlayer.id);
+
+      // Get current seed rankings
+      const draggedSeed = draggedPlayer.seed_ranking;
+      const targetSeed = targetPlayer.seed_ranking;
+
+      if (sourceGroup.id === targetGroup.id) {
+        // Same group: swap positions and seed rankings
+        [sourcePlayerIds[sourceIndex], sourcePlayerIds[targetIndex]] = 
+          [sourcePlayerIds[targetIndex], sourcePlayerIds[sourceIndex]];
+        
+        await Promise.all([
+          GroupService.updateGroup(sourceGroup.id, { player_ids: sourcePlayerIds }),
+          PlayerService.updatePlayer(draggedPlayer.id, { seed_ranking: targetSeed }),
+          PlayerService.updatePlayer(targetPlayer.id, { seed_ranking: draggedSeed })
+        ]);
+      } else {
+        // Different groups: swap players and seed rankings
+        sourcePlayerIds[sourceIndex] = targetPlayer.id;
+        targetPlayerIds[targetIndex] = draggedPlayer.id;
+        
+        await Promise.all([
+          GroupService.updateGroup(sourceGroup.id, { player_ids: sourcePlayerIds }),
+          GroupService.updateGroup(targetGroup.id, { player_ids: targetPlayerIds }),
+          PlayerService.updatePlayer(draggedPlayer.id, { seed_ranking: targetSeed }),
+          PlayerService.updatePlayer(targetPlayer.id, { seed_ranking: draggedSeed })
+        ]);
+      }
+
+      // Reload data to reflect changes
+      await loadData();
+      setDraggedPlayer(null);
+    } catch (error) {
+      console.error('Error swapping players:', error);
+      alert('Failed to swap players');
+      setDraggedPlayer(null);
+    }
+  };
+
   const handleAddBoards = async () => {
     if (!id || newBoardCount < 1) return;
     
     try {
       await BoardService.createBoards(id, newBoardCount);
-      setNewBoardCount(1);
+      setNewBoardCount(0);
       await loadData();
       setSuccess(true);
       setTimeout(() => setSuccess(false), 1500);
@@ -233,6 +317,11 @@ const RegistrationList: React.FC = () => {
     setGenerating(true);
     
     try {
+      // Delete all existing matches before creating new ones
+      console.log('🗑️ Deleting existing matches...');
+      await MatchService.deleteAllMatches(id);
+      console.log('✅ Existing matches deleted');
+      
       // Update tournament with round-robin format configuration
       const updatedScoringSystem = {
         ...tournament.scoring_system,
@@ -260,17 +349,26 @@ const RegistrationList: React.FC = () => {
         ? JSON.parse(savedAssignments) 
         : {};
       
-      // Calculate boards per group based on assignments
-      const groupBoardCounts = new Map<string, number>();
+      // Get all boards and create group-to-boards mapping
+      const allBoards = await BoardService.getBoards(id);
+      const groupBoardNumbers = new Map<string, number[]>();
+      
+      // Initialize empty arrays for all groups
       dbGroups.forEach(group => {
-        groupBoardCounts.set(group.id, 0);
+        groupBoardNumbers.set(group.id, []);
       });
       
-      // Count assigned boards for each group
-      Object.values(boardAssignments).forEach(groupId => {
-        if (groupId && groupBoardCounts.has(groupId)) {
-          groupBoardCounts.set(groupId, groupBoardCounts.get(groupId)! + 1);
+      // Collect assigned board numbers for each group
+      allBoards.forEach(board => {
+        const assignedGroupId = boardAssignments[board.id];
+        if (assignedGroupId && groupBoardNumbers.has(assignedGroupId)) {
+          groupBoardNumbers.get(assignedGroupId)!.push(board.board_number);
         }
+      });
+      
+      // Sort board numbers for each group (ascending order)
+      groupBoardNumbers.forEach(boardList => {
+        boardList.sort((a, b) => a - b);
       });
       
       // Prepare groups for round-robin generation with board allocation
@@ -280,13 +378,14 @@ const RegistrationList: React.FC = () => {
           .map(p => ({ id: p.id, name: p.name }));
       });
       
-      // Generate boards array for each group
+      // Generate board number arrays for each group
       const boardsPerGroup = dbGroups.map(group => {
-        const assignedBoards = groupBoardCounts.get(group.id) || 0;
-        // If no boards assigned, use optimal calculation
-        if (assignedBoards === 0) {
+        const assignedBoards = groupBoardNumbers.get(group.id) || [];
+        // If no boards assigned, use sequential numbering starting from 1
+        if (assignedBoards.length === 0) {
           const groupSize = groupsForMatches[dbGroups.indexOf(group)].length;
-          return groupSize <= 3 ? 1 : groupSize <= 6 ? 2 : Math.floor(groupSize / 2);
+          const boardCount = groupSize <= 3 ? 1 : groupSize <= 6 ? 2 : Math.floor(groupSize / 2);
+          return Array.from({ length: boardCount }, (_, i) => i + 1);
         }
         return assignedBoards;
       });
@@ -454,7 +553,7 @@ const RegistrationList: React.FC = () => {
             </p>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '10px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {tournament.game_type === 'doubles' ? (
               // Render teams for doubles
               (() => {
@@ -514,8 +613,18 @@ const RegistrationList: React.FC = () => {
                             }}>TEAM</span>
                             {teamPlayers.map((player, idx) => (
                               <div key={player.id} style={{ marginLeft: '40px', marginTop: '8px' }}>
-                                <div style={{ fontWeight: 'bold' }}>
+                                <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                   {idx + 1}. {player.name}
+                                  {player.paid && (
+                                    <span style={{
+                                      backgroundColor: '#10b981',
+                                      color: '#fff',
+                                      padding: '2px 8px',
+                                      borderRadius: '4px',
+                                      fontSize: '10px',
+                                      fontWeight: 'bold'
+                                    }}>PAID</span>
+                                  )}
                                 </div>
                                 {player.email && (
                                   <div style={{ 
@@ -573,20 +682,32 @@ const RegistrationList: React.FC = () => {
                               lineHeight: '30px',
                               marginRight: '10px',
                               fontWeight: 'bold'
-                            }}>
-                              {teamCounter}
+                            }}>                              {teamCounter}
                             </div>
-                            <span style={{ fontWeight: 'bold' }}>{player.name}</span>
-                            {player.email && (
-                              <div style={{ 
-                                fontSize: '12px', 
-                                color: '#94a3b8',
-                                marginLeft: '40px',
-                                marginTop: '5px'
-                              }}>
-                                {player.email}
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {player.name}
+                                {player.paid && (
+                                  <span style={{
+                                    backgroundColor: '#10b981',
+                                    color: '#fff',
+                                    padding: '2px 8px',
+                                    borderRadius: '4px',
+                                    fontSize: '10px',
+                                    fontWeight: 'bold'
+                                  }}>PAID</span>
+                                )}
                               </div>
-                            )}
+                              {player.email && (
+                                <div style={{ 
+                                  fontSize: '12px', 
+                                  color: '#94a3b8',
+                                  marginTop: '5px'
+                                }}>
+                                  {player.email}
+                                </div>
+                              )}
+                            </div>
                           </div>
                           <button
                             onClick={() => handleDeletePlayer(player.id, player.name)}
@@ -632,17 +753,30 @@ const RegistrationList: React.FC = () => {
                     }}>
                       {index + 1}
                     </div>
-                    <span style={{ fontWeight: 'bold' }}>{player.name}</span>
-                    {player.email && (
-                      <div style={{ 
-                        fontSize: '12px', 
-                        color: '#94a3b8',
-                        marginLeft: '40px',
-                        marginTop: '5px'
-                      }}>
-                        {player.email}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {player.name}
+                        {player.paid && (
+                          <span style={{
+                            backgroundColor: '#10b981',
+                            color: '#fff',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            fontSize: '10px',
+                            fontWeight: 'bold'
+                          }}>PAID</span>
+                        )}
                       </div>
-                    )}
+                      {player.email && (
+                        <div style={{ 
+                          fontSize: '12px', 
+                          color: '#94a3b8',
+                          marginTop: '5px'
+                        }}>
+                          {player.email}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <button
                     onClick={() => handleDeletePlayer(player.id, player.name)}
@@ -672,54 +806,68 @@ const RegistrationList: React.FC = () => {
           {groups.length > 0 && (
             <div className="card" style={{ marginTop: '20px' }}>
               <h3 style={{ marginBottom: '15px' }}>Generated Groups</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '15px' }}>
-                {groups.map((group) => {
-                  const groupPlayers = players.filter(p => group.player_ids.includes(p.id));
-                  // Sort by seed ranking to show advancing players at top
-                  groupPlayers.sort((a, b) => (a.seed_ranking || 999) - (b.seed_ranking || 999));
-                  
-                  // Get advancement count from tournament
-                  const getAdvancementCount = () => {
-                    const match = tournament.advancement_rules?.match(/Top (\d+)/);
-                    return match ? parseInt(match[1]) : 2;
-                  };
-                  const advancingCount = tournament.format === 'group-knockout' ? getAdvancementCount() : 0;
-                  
-                  return (
-                    <div
-                      key={group.id}
-                      style={{
-                        padding: '15px',
-                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                        borderRadius: '8px',
-                        border: '2px solid rgba(102, 126, 234, 0.3)'
-                      }}
-                    >
-                      <h4 style={{ marginBottom: '10px', color: '#667eea' }}>{group.name}</h4>
-                      <div>
-                        {groupPlayers.map((player, idx) => {
-                          const isAdvancing = tournament.format === 'group-knockout' && idx < advancingCount;
-                          return (
-                            <div
-                              key={player.id}
-                              style={{
-                                padding: '8px',
-                                marginBottom: '5px',
-                                backgroundColor: isAdvancing ? 'rgba(52, 211, 153, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                                borderRadius: '4px',
-                                border: isAdvancing ? '2px solid rgba(52, 211, 153, 0.5)' : 'none'
-                              }}
-                            >
-                              <span style={{ fontWeight: 'bold' }}>#{player.seed_ranking || idx + 1}</span> {player.name}
-                              {isAdvancing && <span style={{ color: '#34d399', marginLeft: '8px', fontSize: '12px' }}>✓ Advances</span>}
+              <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '15px' }}>
+                💡 Drag players over other players to swap their positions
+              </p>
+              
+              {groups.map((group) => {
+                const groupPlayers = players.filter(p => group.player_ids.includes(p.id));
+                // Sort by seed ranking
+                groupPlayers.sort((a, b) => (a.seed_ranking || 999) - (b.seed_ranking || 999));
+                
+                return (
+                  <div key={group.id} style={{ marginBottom: '20px' }}>
+                    <h4 style={{ 
+                      marginBottom: '10px', 
+                      color: '#667eea',
+                      fontSize: '16px',
+                      fontWeight: 'bold',
+                      padding: '10px 0',
+                      borderBottom: '2px solid rgba(102, 126, 234, 0.3)'
+                    }}>
+                      {group.name}
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {groupPlayers.map((player, idx) => {
+                        const isDragging = draggedPlayer?.id === player.id;
+                        const isDragOver = dragOverPlayer?.id === player.id;
+                        
+                        return (
+                          <div
+                            key={player.id}
+                            draggable={!tournament.group_stage_started}
+                            onDragStart={(e) => handleDragStart(e, player)}
+                            onDragOver={(e) => handleDragOver(e, player)}
+                            onDragLeave={handleDragLeave}
+                            onDrop={(e) => handleDrop(e, player)}
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              padding: '15px',
+                              backgroundColor: isDragOver ? 'rgba(102, 126, 234, 0.3)' : '#1e293b',
+                              borderRadius: '8px',
+                              border: isDragOver 
+                                ? '3px solid rgba(102, 126, 234, 0.8)' 
+                                : '1px solid rgba(100, 116, 139, 0.3)',
+                              cursor: tournament.group_stage_started ? 'default' : 'move',
+                              opacity: isDragging ? 0.5 : 1,
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>
+                                <span style={{ color: '#667eea', marginRight: '8px' }}>#{player.seed_ranking || idx + 1}</span>
+                                {player.name}
+                              </div>
                             </div>
-                          );
-                        })}
-                      </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -742,14 +890,14 @@ const RegistrationList: React.FC = () => {
                     <input
                       type="number"
                       className="input"
-                      min="1"
+                      min="0"
                       max="20"
                       value={newBoardCount}
-                      onChange={(e) => setNewBoardCount(parseInt(e.target.value) || 1)}
+                      onChange={(e) => setNewBoardCount(e.target.value === '' ? 0 : parseInt(e.target.value))}
                       placeholder="Number of boards"
                     />
                   </div>
-                  <button className="button button-primary" onClick={handleAddBoards}>
+                  <button className="button button-primary" onClick={handleAddBoards} disabled={newBoardCount < 1}>
                     <Grid size={16} />
                     Add {newBoardCount} Board{newBoardCount !== 1 ? 's' : ''}
                   </button>

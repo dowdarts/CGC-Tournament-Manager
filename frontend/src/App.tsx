@@ -12,8 +12,10 @@ import BoardManager from './pages/BoardManager';
 import Scorer from './pages/Scorer';
 import KnockoutBracket from './pages/KnockoutBracket';
 import Analytics from './pages/Analytics';
+import Paycal from './pages/Paycal';
 import Settings from './pages/Settings';
 import PublicRegister from './pages/PublicRegister';
+import TournamentLobby from './pages/TournamentLobby';
 import './App.css';
 
 function App() {
@@ -21,7 +23,8 @@ function App() {
     <Router>
       <Routes>
         {/* Public routes without layout */}
-        <Route path="/register/:id" element={<PublicRegister />} />
+        <Route path="/registration-portal" element={<TournamentLobby />} />
+        <Route path="/registration-portal/:id" element={<PublicRegister />} />
         
         {/* Dashboard with main layout */}
         <Route path="/" element={
@@ -48,6 +51,7 @@ function App() {
               <Route path="boards" element={<BoardManager />} />
               <Route path="match/:matchId/score" element={<Scorer />} />
               <Route path="bracket" element={<KnockoutBracket />} />
+              <Route path="paycal" element={<Paycal />} />
               <Route path="analytics" element={<Analytics />} />
             </Routes>
           </TournamentLayout>

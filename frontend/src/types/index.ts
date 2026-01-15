@@ -17,6 +17,8 @@ export interface Tournament {
   participants_confirmed?: boolean;
   groups_generated?: boolean;
   group_stage_created?: boolean;
+  group_stage_started?: boolean;
+  group_stage_completed?: boolean;
   
   // Scoring Configuration
   scoring_system?: {

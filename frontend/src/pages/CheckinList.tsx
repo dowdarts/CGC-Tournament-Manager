@@ -23,6 +23,19 @@ const CheckinList: React.FC = () => {
   const [bulkInput, setBulkInput] = useState('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [advancing, setAdvancing] = useState(false);
+  const [showPreviousPlayers, setShowPreviousPlayers] = useState(false);
+  const [previousPlayers, setPreviousPlayers] = useState<{ name: string; email?: string; phone?: string }[]>([]);
+  const [previousPlayersFilter, setPreviousPlayersFilter] = useState('');
+  const [selectedPreviousPlayers, setSelectedPreviousPlayers] = useState<Set<string>>(new Set());
+
+  // Helper function to capitalize names properly
+  const capitalizeName = (name: string): string => {
+    return name
+      .trim()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
 
   // Listen for helpMode changes from localStorage
   useEffect(() => {
@@ -38,7 +51,10 @@ const CheckinList: React.FC = () => {
     };
   }, []);
 
-  const registrationUrl = `${window.location.origin}/register/${id}`;
+  const registrationUrl = `${window.location.origin}/registration-portal`;
+  const githubPagesUrl = `https://dowdarts.github.io/CGC-Tournament-Manager/registration-portal`;
+  const [urlType, setUrlType] = useState<'local' | 'production'>('production');
+  const currentUrl = urlType === 'local' ? registrationUrl : githubPagesUrl;
 
   useEffect(() => {
     loadTournament();
@@ -91,11 +107,30 @@ const CheckinList: React.FC = () => {
       if (tournament?.game_type === 'doubles') {
         // For doubles, add both players as a team
         const teamId = crypto.randomUUID();
-        const player1Name = newPlayerName.trim();
-        const player2Name = newPlayerEmail.trim(); // Reusing email field for player 2 name in doubles
+        const player1Name = capitalizeName(newPlayerName);
+        const player2Name = capitalizeName(newPlayerEmail); // Reusing email field for player 2 name in doubles
         
         if (!player2Name) {
           setError('Both team members are required for doubles');
+          setAdding(false);
+          return;
+        }
+        
+        // Check for duplicate names
+        const name1Exists = players.some(p => 
+          p.name.toLowerCase() === player1Name.toLowerCase()
+        );
+        const name2Exists = players.some(p => 
+          p.name.toLowerCase() === player2Name.toLowerCase()
+        );
+        
+        if (name1Exists) {
+          setError(`Player "${player1Name}" already exists in this tournament`);
+          setAdding(false);
+          return;
+        }
+        if (name2Exists) {
+          setError(`Player "${player2Name}" already exists in this tournament`);
           setAdding(false);
           return;
         }
@@ -116,9 +151,20 @@ const CheckinList: React.FC = () => {
         ]);
       } else {
         // For singles, add single player
+        const nameToAdd = capitalizeName(newPlayerName);
+        const nameExists = players.some(p => 
+          p.name.toLowerCase() === nameToAdd.toLowerCase()
+        );
+        
+        if (nameExists) {
+          setError(`Player "${nameToAdd}" already exists in this tournament`);
+          setAdding(false);
+          return;
+        }
+        
         await PlayerService.addPlayer({
           tournament_id: id,
-          name: newPlayerName.trim(),
+          name: nameToAdd,
           email: newPlayerEmail.trim() || undefined,
           paid: false
         });
@@ -151,6 +197,29 @@ const CheckinList: React.FC = () => {
           return;
         }
         
+        const existingNames = new Set(players.map(p => p.name.toLowerCase()));
+        const namesToAdd = new Set<string>();
+        const duplicates: string[] = [];
+        
+        // Check for duplicates first
+        for (let i = 0; i < lines.length; i++) {
+          const parts = lines[i].split(',').map(p => p.trim());
+          const name = capitalizeName(parts[0]);
+          const nameLower = name.toLowerCase();
+          
+          if (existingNames.has(nameLower) || namesToAdd.has(nameLower)) {
+            duplicates.push(name);
+          } else {
+            namesToAdd.add(nameLower);
+          }
+        }
+        
+        if (duplicates.length > 0) {
+          setError(`Duplicate names found: ${duplicates.join(', ')}`);
+          setAdding(false);
+          return;
+        }
+        
         const teams = [];
         for (let i = 0; i < lines.length; i += 2) {
           const teamId = crypto.randomUUID();
@@ -160,14 +229,14 @@ const CheckinList: React.FC = () => {
           teams.push(
             PlayerService.addPlayer({
               tournament_id: id,
-              name: player1Parts[0],
+              name: capitalizeName(player1Parts[0]),
               email: player1Parts[1] || undefined,
               paid: false,
               team_id: teamId
             }),
             PlayerService.addPlayer({
               tournament_id: id,
-              name: player2Parts[0],
+              name: capitalizeName(player2Parts[0]),
               email: player2Parts[1] || undefined,
               paid: false,
               team_id: teamId
@@ -178,17 +247,36 @@ const CheckinList: React.FC = () => {
         await Promise.all(teams);
       } else {
         // For singles, add each line as a player
-        const players = lines.map(line => {
+        const existingNames = new Set(players.map(p => p.name.toLowerCase()));
+        const namesToAdd = new Set<string>();
+        const duplicates: string[] = [];
+        
+        const playersToAdd = lines.map(line => {
           const parts = line.split(',').map(p => p.trim());
+          const name = capitalizeName(parts[0]);
+          const nameLower = name.toLowerCase();
+          
+          if (existingNames.has(nameLower) || namesToAdd.has(nameLower)) {
+            duplicates.push(name);
+            return null;
+          }
+          
+          namesToAdd.add(nameLower);
           return PlayerService.addPlayer({
             tournament_id: id,
-            name: parts[0],
+            name: name,
             email: parts[1] || undefined,
             paid: false
           });
-        });
+        }).filter(Boolean);
         
-        await Promise.all(players);
+        if (duplicates.length > 0) {
+          setError(`Duplicate names found: ${duplicates.join(', ')}`);
+          setAdding(false);
+          return;
+        }
+        
+        await Promise.all(playersToAdd);
       }
       
       setBulkInput('');
@@ -284,6 +372,61 @@ const CheckinList: React.FC = () => {
     }
   };
 
+  const loadPreviousPlayers = async () => {
+    try {
+      const allPlayers = await PlayerService.getAllPlayers();
+      setPreviousPlayers(allPlayers);
+      setShowPreviousPlayers(true);
+    } catch (error) {
+      console.error('Error loading previous players:', error);
+      setError('Failed to load previous players');
+    }
+  };
+
+  const handleAddSelectedPlayers = async () => {
+    if (!id || selectedPreviousPlayers.size === 0) return;
+    
+    try {
+      const playersToAdd = previousPlayers.filter(p => 
+        selectedPreviousPlayers.has(p.name)
+      );
+      
+      for (const player of playersToAdd) {
+        const exists = players.some(p => 
+          p.name.toLowerCase().trim() === player.name.toLowerCase().trim()
+        );
+        
+        if (!exists) {
+          await PlayerService.addPlayer({
+            tournament_id: id,
+            name: capitalizeName(player.name),
+            email: player.email || '',
+            paid: false
+          });
+        }
+      }
+      
+      setSelectedPreviousPlayers(new Set());
+      setShowPreviousPlayers(false);
+      await loadPlayers(true);
+    } catch (error) {
+      console.error('Error adding players:', error);
+      setError('Failed to add players');
+    }
+  };
+
+  const togglePlayerSelection = (playerName: string) => {
+    setSelectedPreviousPlayers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(playerName)) {
+        newSet.delete(playerName);
+      } else {
+        newSet.add(playerName);
+      }
+      return newSet;
+    });
+  };
+
   if (loading) {
     return <div className="alert alert-info">Loading check-in list...</div>;
   }
@@ -359,6 +502,110 @@ const CheckinList: React.FC = () => {
         </button>
       </div>
 
+      {/* Previous Players Modal */}
+      {showPreviousPlayers && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div className="card" style={{
+            maxWidth: '600px',
+            width: '90%',
+            maxHeight: '80vh',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3>Previous Players</h3>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => {
+                  setShowPreviousPlayers(false);
+                  setSelectedPreviousPlayers(new Set());
+                  setPreviousPlayersFilter('');
+                }}
+              >
+                Close
+              </button>
+            </div>
+
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Filter players by name..."
+              value={previousPlayersFilter}
+              onChange={(e) => setPreviousPlayersFilter(e.target.value)}
+              style={{ marginBottom: '15px' }}
+            />
+
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              border: '1px solid #334155',
+              borderRadius: '8px',
+              padding: '10px',
+              marginBottom: '15px'
+            }}>
+              {previousPlayers
+                .filter(p => p.name.toLowerCase().includes(previousPlayersFilter.toLowerCase()))
+                .map(player => (
+                  <div
+                    key={player.name}
+                    style={{
+                      padding: '10px',
+                      border: '1px solid #334155',
+                      borderRadius: '6px',
+                      marginBottom: '8px',
+                      cursor: 'pointer',
+                      backgroundColor: selectedPreviousPlayers.has(player.name) ? '#1e3a5f' : 'transparent'
+                    }}
+                    onClick={() => togglePlayerSelection(player.name)}
+                  >
+                    <div style={{ fontWeight: 'bold' }}>{player.name}</div>
+                    {player.email && <div style={{ fontSize: '12px', color: '#94a3b8' }}>{player.email}</div>}
+                  </div>
+                ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  const filtered = previousPlayers.filter(p => 
+                    p.name.toLowerCase().includes(previousPlayersFilter.toLowerCase())
+                  );
+                  if (selectedPreviousPlayers.size === filtered.length) {
+                    setSelectedPreviousPlayers(new Set());
+                  } else {
+                    setSelectedPreviousPlayers(new Set(filtered.map(p => p.name)));
+                  }
+                }}
+              >
+                {selectedPreviousPlayers.size === previousPlayers.filter(p => 
+                  p.name.toLowerCase().includes(previousPlayersFilter.toLowerCase())
+                ).length ? 'Deselect All' : 'Select All'}
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleAddSelectedPlayers}
+                disabled={selectedPreviousPlayers.size === 0}
+                style={{ flex: 1 }}
+              >
+                Add {selectedPreviousPlayers.size} Player{selectedPreviousPlayers.size !== 1 ? 's' : ''} to Tournament
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {error && (
         <div className="alert alert-danger" style={{ marginBottom: '20px' }}>
           {error}
@@ -374,31 +621,122 @@ const CheckinList: React.FC = () => {
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         border: '2px solid #667eea'
       }}>
-        <h3 style={{ marginBottom: '15px', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <ExternalLink size={20} style={{ display: 'inline', marginRight: '8px' }} />
-          Self-Service Registration Portal
-          {helpMode && (
-            <span 
-              title="Share this link with players to let them register themselves on tablets or phones. Registrations appear in the Check-in List."
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+          <h3 style={{ margin: 0, color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ExternalLink size={20} style={{ display: 'inline', marginRight: '8px' }} />
+            Self-Service Registration Portal
+            {helpMode && (
+              <span 
+                title="Share this link with players to let them register themselves on tablets or phones. Registrations appear in the Check-in List."
+                style={{ 
+                  cursor: 'help',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  fontSize: '12px'
+                }}
+              >
+                <Info size={14} />
+              </span>
+            )}
+          </h3>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ 
+              fontSize: '14px', 
+              fontWeight: 600, 
+              color: '#fff'
+            }}>
+              Status:
+            </span>
+            <span style={{ 
+              fontSize: '16px', 
+              fontWeight: 700, 
+              color: tournament?.registration_enabled ? '#10b981' : '#ef4444',
+              textTransform: 'uppercase',
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              padding: '4px 12px',
+              borderRadius: '6px'
+            }}>
+              {tournament?.registration_enabled ? 'OPEN' : 'CLOSED'}
+            </span>
+            <button
+              onClick={async () => {
+                if (!id) return;
+                try {
+                  const updated = await TournamentService.updateTournament(id, {
+                    registration_enabled: !tournament?.registration_enabled
+                  });
+                  setTournament(updated);
+                  alert(updated.registration_enabled ? '✅ Registration is now ONLINE' : '🔴 Registration is now OFFLINE');
+                } catch (err) {
+                  console.error('Failed to toggle registration:', err);
+                  setError('Failed to toggle registration');
+                }
+              }}
+              className="button"
               style={{ 
-                cursor: 'help',
-                display: 'inline-flex',
+                backgroundColor: tournament?.registration_enabled ? '#ef4444' : '#10b981',
+                color: '#fff',
+                display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                width: '20px',
-                height: '20px',
-                borderRadius: '50%',
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                fontSize: '12px'
+                gap: '6px',
+                padding: '8px 16px'
               }}
             >
-              <Info size={14} />
-            </span>
-          )}
-        </h3>
+              {tournament?.registration_enabled ? 'Close' : 'Open'} Registration
+            </button>
+          </div>
+        </div>
+        
         <p style={{ color: '#e2e8f0', marginBottom: '15px', fontSize: '14px' }}>
-          Share this link with players to register themselves on tablets or phones
+          {tournament?.registration_enabled 
+            ? 'Share this link with players. Live tournaments will appear in the registration lobby.'
+            : 'Registration is closed. Enable it to allow new player registrations and make this tournament visible in the lobby.'}
         </p>
+        
+        {/* URL Type Toggle */}
+        <div style={{ marginBottom: '15px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <span style={{ color: '#e2e8f0', fontSize: '14px', fontWeight: 600 }}>URL Type:</span>
+          <div style={{ display: 'flex', gap: '8px', backgroundColor: 'rgba(255, 255, 255, 0.1)', padding: '4px', borderRadius: '8px' }}>
+            <button
+              type="button"
+              onClick={() => setUrlType('local')}
+              className="button"
+              style={{
+                padding: '6px 16px',
+                backgroundColor: urlType === 'local' ? '#667eea' : 'transparent',
+                color: '#fff',
+                border: 'none',
+                fontSize: '13px'
+              }}
+            >
+              Local
+            </button>
+            <button
+              type="button"
+              onClick={() => setUrlType('production')}
+              className="button"
+              style={{
+                padding: '6px 16px',
+                backgroundColor: urlType === 'production' ? '#667eea' : 'transparent',
+                color: '#fff',
+                border: 'none',
+                fontSize: '13px'
+              }}
+            >
+              Production
+            </button>
+          </div>
+          <span style={{ color: '#94a3b8', fontSize: '12px', fontStyle: 'italic' }}>
+            {urlType === 'local' ? '(For testing locally)' : '(Share this with players)'}
+          </span>
+        </div>
+        
         <div style={{ 
           display: 'flex', 
           gap: '10px',
@@ -409,7 +747,7 @@ const CheckinList: React.FC = () => {
         }}>
           <input
             type="text"
-            value={registrationUrl}
+            value={currentUrl}
             readOnly
             className="input"
             style={{ 
@@ -422,7 +760,7 @@ const CheckinList: React.FC = () => {
           />
           <button
             onClick={() => {
-              navigator.clipboard.writeText(registrationUrl);
+              navigator.clipboard.writeText(currentUrl);
               setCopied(true);
               setTimeout(() => setCopied(false), 2000);
             }}
@@ -434,7 +772,7 @@ const CheckinList: React.FC = () => {
             {copied ? 'Copied!' : 'Copy'}
           </button>
           <button
-            onClick={() => window.open(registrationUrl, '_blank')}
+            onClick={() => window.open(currentUrl, '_blank')}
             className="button"
             style={{ 
               backgroundColor: '#fff',
@@ -475,7 +813,16 @@ const CheckinList: React.FC = () => {
               </span>
             )}
           </h3>
-          <button
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              type="button"
+              onClick={loadPreviousPlayers}
+              className="btn btn-secondary"
+            >
+              <Users size={16} style={{ marginRight: '6px' }} />
+              Add from Previous Players
+            </button>
+            <button
             type="button"
             onClick={() => setShowBulkModal(true)}
             className="button button-secondary"
@@ -484,6 +831,7 @@ const CheckinList: React.FC = () => {
             <Users size={18} style={{ marginRight: '5px' }} />
             Bulk Add
           </button>
+        </div>
         </div>
         
         {tournament?.game_type === 'doubles' ? (

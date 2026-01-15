@@ -146,10 +146,36 @@ const Dashboard: React.FC = () => {
 
               <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
                 <button
-                  onClick={() => window.open(`/tournament/${tournament.id}/info`, '_blank')}
+                  onClick={() => {
+                    // Smart navigation based on tournament state
+                    let route = `/tournament/${tournament.id}/info`; // default
+                    
+                    // If knockout stage is active, go to knockout bracket
+                    if (tournament.status === 'knockout' || tournament.status === 'completed') {
+                      route = `/tournament/${tournament.id}/bracket`;
+                    }
+                    // If group stage is created/active, go to group stage
+                    else if (tournament.group_stage_created || tournament.status === 'group-stage') {
+                      route = `/tournament/${tournament.id}/groups`;
+                    }
+                    // If groups are configured but not started, go to group configuration
+                    else if (tournament.groups_generated) {
+                      route = `/tournament/${tournament.id}/players`;
+                    }
+                    
+                    window.open(route, '_blank');
+                  }}
                   className="button button-primary"
                   style={{ flex: 1 }}
-                  title="Open tournament management in a new tab"
+                  title={`Open tournament management in a new tab - ${
+                    tournament.status === 'knockout' || tournament.status === 'completed' 
+                      ? 'Knockout Bracket' 
+                      : tournament.group_stage_created || tournament.status === 'group-stage'
+                        ? 'Group Stage'
+                        : tournament.groups_generated
+                          ? 'Group Configuration'
+                          : 'Setup Info'
+                  }`}
                 >
                   <Play size={16} style={{ marginRight: '5px' }} /> Manage
                 </button>

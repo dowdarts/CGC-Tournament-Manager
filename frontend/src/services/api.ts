@@ -104,6 +104,31 @@ export const PlayerService = {
       .delete()
       .eq('id', id);
     if (error) throw error;
+  },
+
+  async getAllPlayers() {
+    const { data, error } = await supabase
+      .from('players')
+      .select('name, email')
+      .order('name', { ascending: true });
+    if (error) throw error;
+    
+    // Remove duplicates based on name (case-insensitive)
+    const uniquePlayers = new Map<string, { name: string; email?: string }>();
+    
+    data?.forEach(player => {
+      const normalizedName = player.name.toLowerCase().trim();
+      if (!uniquePlayers.has(normalizedName)) {
+        uniquePlayers.set(normalizedName, {
+          name: player.name,
+          email: player.email || undefined
+        });
+      }
+    });
+    
+    return Array.from(uniquePlayers.values()).sort((a, b) => 
+      a.name.localeCompare(b.name)
+    );
   }
 };
 
@@ -144,6 +169,14 @@ export const MatchService = {
       .select();
     if (error) throw error;
     return data?.[0];
+  },
+
+  async deleteAllMatches(tournamentId: string) {
+    const { error } = await supabase
+      .from('matches')
+      .delete()
+      .eq('tournament_id', tournamentId);
+    if (error) throw error;
   }
 };
 
@@ -167,6 +200,16 @@ export const GroupService = {
     return data || [];
   },
 
+  async updateGroup(groupId: string, updates: Partial<Group>) {
+    const { data, error } = await supabase
+      .from('groups')
+      .update(updates)
+      .eq('id', groupId)
+      .select();
+    if (error) throw error;
+    return data?.[0];
+  },
+
   async deleteGroups(tournamentId: string) {
     const { error } = await supabase
       .from('groups')
@@ -185,6 +228,15 @@ export const BoardService = {
       status: 'available' as const
     }));
     
+    const { data, error } = await supabase
+      .from('boards')
+      .insert(boards)
+      .select();
+    if (error) throw error;
+    return data || [];
+  },
+
+  async createBoardsBatch(tournamentId: string, boards: Array<{ tournament_id: string; board_number: number; status: 'available' }>) {
     const { data, error } = await supabase
       .from('boards')
       .insert(boards)

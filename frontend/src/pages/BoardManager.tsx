@@ -12,11 +12,11 @@ interface GroupWithBoards extends Group {
 export default function BoardManager() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { currentTournament, loadTournament } = useTournamentStore();
+  const { currentTournament } = useTournamentStore();
   
   const [boards, setBoards] = useState<Board[]>([]);
   const [groups, setGroups] = useState<GroupWithBoards[]>([]);
-  const [newBoardCount, setNewBoardCount] = useState(1);
+  const [newBoardCount, setNewBoardCount] = useState(0);
   const [boardGroupAssignments, setBoardGroupAssignments] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -32,7 +32,6 @@ export default function BoardManager() {
     
     setLoading(true);
     try {
-      await loadTournament(id);
       const [boardsData, groupsData] = await Promise.all([
         BoardService.getBoards(id),
         GroupService.getGroups(id)
@@ -73,8 +72,20 @@ export default function BoardManager() {
     if (!id || newBoardCount < 1) return;
     
     try {
-      await BoardService.createBoards(id, newBoardCount);
-      setNewBoardCount(1);
+      // Get the current max board number
+      const maxBoardNumber = boards.length > 0 
+        ? Math.max(...boards.map(b => b.board_number))
+        : 0;
+      
+      // Create new boards starting from the next number
+      const newBoards = Array.from({ length: newBoardCount }, (_, i) => ({
+        tournament_id: id,
+        board_number: maxBoardNumber + i + 1,
+        status: 'available' as const
+      }));
+      
+      await BoardService.createBoardsBatch(id, newBoards);
+      setNewBoardCount(0);
       await loadData();
     } catch (error) {
       console.error('Error creating boards:', error);
@@ -143,13 +154,13 @@ export default function BoardManager() {
             <input
               type="number"
               className="input"
-              min="1"
+              min="0"
               max="20"
               value={newBoardCount}
-              onChange={(e) => setNewBoardCount(parseInt(e.target.value) || 1)}
+              onChange={(e) => setNewBoardCount(e.target.value === '' ? 0 : parseInt(e.target.value))}
             />
           </div>
-          <button className="button button-primary" onClick={handleAddBoards}>
+          <button className="button button-primary" onClick={handleAddBoards} disabled={newBoardCount < 1}>
             <Plus size={18} />
             Add Boards
           </button>
