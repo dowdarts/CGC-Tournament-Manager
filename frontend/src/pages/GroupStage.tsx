@@ -802,13 +802,24 @@ const GroupStage: React.FC = () => {
             <button
               className="button button-primary"
               onClick={() => {
-                // Initialize advancement counts
-                const initialCounts: { [groupId: string]: number } = {};
-                groupMatchData.forEach(group => {
-                  initialCounts[group.groupId] = Math.min(2, group.players.length);
-                });
-                setAdvancementCounts(initialCounts);
-                setShowKnockoutSetup(true);
+                const playersPerGroup = prompt('How many players advance from each group?', '2');
+                const advanceCount = parseInt(playersPerGroup || '2');
+                
+                if (advanceCount > 0) {
+                  // Set same advancement count for all groups
+                  const counts: { [groupId: string]: number } = {};
+                  groupMatchData.forEach(group => {
+                    counts[group.groupId] = Math.min(advanceCount, group.players.length);
+                  });
+                  setAdvancementCounts(counts);
+                  
+                  // Save to localStorage for Knockout tab to use
+                  localStorage.setItem('knockoutAdvancementCount', advanceCount.toString());
+                  localStorage.setItem('knockoutAdvancementCounts', JSON.stringify(counts));
+                  
+                  // Navigate to Knockout Bracket tab
+                  window.location.hash = '#/tournament/' + id + '/knockout';
+                }
               }}
               style={{
                 background: '#22c55e',
@@ -819,14 +830,14 @@ const GroupStage: React.FC = () => {
                 fontWeight: '600'
               }}
             >
-              Setup Knockout Bracket
+              🏆 Start Knockout Bracket
             </button>
           </div>
         </div>
       )}
 
-      {/* Knockout Setup Modal */}
-      {showKnockoutSetup && (
+      {/* Knockout Setup Modal - REMOVED - Now happens in Knockout tab */}
+      {false && showKnockoutSetup && (
         <div style={{
           position: 'fixed',
           top: 0,

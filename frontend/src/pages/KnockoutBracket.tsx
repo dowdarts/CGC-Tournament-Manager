@@ -15,6 +15,7 @@ const KnockoutBracket: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [knockoutMatches, setKnockoutMatches] = useState<KnockoutMatch[]>([]);
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<KnockoutMatch | null>(null);
   const [showScoreModal, setShowScoreModal] = useState(false);
   const [score1, setScore1] = useState('');
@@ -23,9 +24,113 @@ const KnockoutBracket: React.FC = () => {
 
   useEffect(() => {
     if (id) {
-      loadKnockoutMatches();
+      checkAndGenerateBracket();
     }
   }, [id]);
+
+  const checkAndGenerateBracket = async () => {
+    if (!id) return;
+    
+    try {
+      setLoading(true);
+      
+      // Check if knockout matches already exist
+      const { data: existingMatches, error } = await supabase
+        .from('matches')
+        .select('id')
+        .eq('tournament_id', id)
+        .is('group_id', null)
+        .limit(1);
+      
+      if (error) throw error;
+      
+      if (!existingMatches || existingMatches.length === 0) {
+        // No knockout matches exist - check if we should generate them
+        const advancementCountsJson = localStorage.getItem('knockoutAdvancementCounts');
+        
+        if (advancementCountsJson) {
+          // Auto-generate bracket
+          await generateKnockoutBracket();
+        } else {
+          // Just load empty state
+          setKnockoutMatches([]);
+          setLoading(false);
+        }
+      } else {
+        // Knockout matches exist - load them
+        await loadKnockoutMatches();
+      }
+    } catch (error) {
+      console.error('❌ Error checking knockout matches:', error);
+      setLoading(false);
+    }
+  };
+
+  const generateKnockoutBracket = async () => {
+    if (!id) return;
+    
+    try {
+      setGenerating(true);
+      
+      // Get advancement counts from localStorage
+      const advancementCountsJson = localStorage.getItem('knockoutAdvancementCounts');
+      const advancementCounts = advancementCountsJson ? JSON.parse(advancementCountsJson) : {};
+      
+      // Get group standings from localStorage
+      const knockoutBracketJson = localStorage.getItem('knockoutBracket');
+      if (!knockoutBracketJson) {
+        alert('No knockout bracket data found. Please go back to Group Stage and click \"Start Knockout Bracket\"');
+        setGenerating(false);
+        setLoading(false);
+        return;
+      }
+      
+      const fullBracket = JSON.parse(knockoutBracketJson);
+      
+      // Save matches to database
+      const matchesToCreate = fullBracket.map((match: any, index: number) => ({
+        tournament_id: id,
+        round: index + 1,
+        board_number: match.bracket_position || (index + 1),
+        player1_id: match.player1?.id || null,
+        player2_id: match.player2?.id || null,
+        player1_score: null,
+        player2_score: null,
+        winner_id: null,
+        completed: false,
+        group_id: null // Null for knockout matches\n      }));
+      
+      // Create matches in database
+      const { data: createdMatches, error } = await supabase
+        .from('matches')
+        .insert(matchesToCreate)
+        .select();
+      
+      if (error) throw error;
+      
+      console.log('✅ Generated knockout bracket with', createdMatches?.length, 'matches');
+      
+      // Update tournament status
+      const { error: updateError } = await supabase
+        .from('tournaments')
+        .update({
+          knockout_started: true,
+          group_stage_completed: true
+        })
+        .eq('id', id);
+      
+      if (updateError) throw updateError;
+      
+      // Load the newly created matches
+      await loadKnockoutMatches();
+      
+    } catch (error) {
+      console.error('❌ Error generating knockout bracket:', error);
+      alert('Failed to generate knockout bracket. Please try again.');
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   const loadKnockoutMatches = async () => {
     if (!id) return;
@@ -473,12 +578,12 @@ const KnockoutBracket: React.FC = () => {
     );
   };
 
-  if (loading) {
+  if (loading || generating) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-500">Loading bracket...</p>
+          <p className="text-slate-500">{generating ? 'Generating knockout bracket...' : 'Loading bracket...'}</p>
         </div>
       </div>
     );
