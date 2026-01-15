@@ -94,6 +94,9 @@ export function generateRoundRobin(
   const matchesPerRound = Math.floor(n / 2);
   const matches: Match[] = [];
   
+  console.log(`Round-Robin Setup: ${players.length} players, ${hasBye ? 'ODD (bye added)' : 'EVEN'}`);
+  console.log(`  Participants (with bye): ${n}, Rounds: ${rounds}, Match slots per round: ${matchesPerRound}`);
+  
   // Ensure we have at least 1 board
   const boards = Math.max(1, totalBoards);
   
@@ -117,6 +120,8 @@ export function generateRoundRobin(
       
       // Skip bye matches
       if (player1 === byeToken || player2 === byeToken) {
+        const byePlayer = player1 === byeToken ? player2 : player1;
+        console.log(`  Round ${round + 1}, Slot ${matchIndex + 1}: ${byePlayer} has BYE`);
         continue;
       }
       
@@ -132,9 +137,12 @@ export function generateRoundRobin(
         player1_id: participantIds[home],
         player2_id: participantIds[away]
       });
+      
+      console.log(`  Round ${round + 1}, Match ${matchIndex + 1}: ${player1} vs ${player2} on Board ${board}`);
     }
   }
   
+  console.log(`Total matches created: ${matches.length}`);
   return matches;
 }
 

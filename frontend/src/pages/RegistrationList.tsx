@@ -221,7 +221,13 @@ const RegistrationList: React.FC = () => {
     legs_per_set?: number;
     sets_per_match?: number;
   }) => {
-    if (!id || !tournament || !tournament.num_groups) return;
+    if (!id || !tournament || !tournament.num_groups) {
+      console.error('Missing required data:', { id, tournament: !!tournament, num_groups: tournament?.num_groups });
+      return;
+    }
+    
+    console.log('🚀 Starting group stage creation...');
+    console.log('Format config:', formatConfig);
     
     setShowFormatModal(false);
     setGenerating(true);
@@ -287,7 +293,7 @@ const RegistrationList: React.FC = () => {
       
       const allMatches = generateGroupStageMatches(groupsForMatches, boardsPerGroup);
       
-      console.log('Generated Group Stage:');
+      console.log('✅ Generated matches:', allMatches.length, 'groups');
       console.log('Match Format:', formatConfig.match_format);
       if (formatConfig.match_format === 'matchplay') {
         console.log(`Legs Per Match: ${formatConfig.legs_per_match}, Play Style: ${formatConfig.play_style}`);
@@ -296,13 +302,16 @@ const RegistrationList: React.FC = () => {
       }
       
       // Create matches in database
+      let totalMatchesCreated = 0;
       for (const { groupIndex, groupLetter, matches } of allMatches) {
         const dbGroup = dbGroups[groupIndex];
         
-        console.log(`\nGroup ${groupLetter}: Creating ${matches.length} matches`);
+        console.log(`\n📋 Group ${groupLetter} (${dbGroup.id}): Creating ${matches.length} matches`);
         
         for (const match of matches) {
-          await MatchService.createMatch({
+          console.log(`  Creating match: ${match.player1} vs ${match.player2}, Round ${match.round}, Board ${match.board}`);
+          
+          const createdMatch = await MatchService.createMatch({
             tournament_id: id,
             player1_id: match.player1_id!,
             player2_id: match.player2_id!,
@@ -320,15 +329,25 @@ const RegistrationList: React.FC = () => {
             round_number: match.round,
             board_number: match.board
           });
+          
+          if (createdMatch) {
+            totalMatchesCreated++;
+            console.log(`    ✓ Match created: ${createdMatch.id}`);
+          } else {
+            console.error(`    ✗ Failed to create match`);
+          }
         }
       }
       
       // Mark group stage as created
+      console.log(`\n🎉 Total matches created: ${totalMatchesCreated}`);
+      
       await TournamentService.updateTournament(id, {
         group_stage_created: true
       });
       
       console.log('✅ Group stage matches created successfully');
+      alert(`Successfully created ${totalMatchesCreated} matches across ${allMatches.length} groups!`);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 2000);
       
