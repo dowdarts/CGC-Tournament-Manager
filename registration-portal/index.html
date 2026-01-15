@@ -320,14 +320,13 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // Initialize Supabase client
-    const supabaseUrl = 'https://pfujbgwgsxuhgvmeatjh.supabase.co';
-    const supabaseKey = 'sb_publishable_noZX7_xCvPZSqbQGfDsFMg_wRsuvLyB';
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    const supabaseClient = window.supabase.createClient(
+      'https://pfujbgwgsxuhgvmeatjh.supabase.co',
+      'sb_publishable_noZX7_xCvPZSqbQGfDsFMg_wRsuvLyB'
+    );
     
     let selectedTournament = null;
 
-    // Load active tournaments
     async function loadTournaments() {
       const listEl = document.getElementById('tournament-list');
       const emptyEl = document.getElementById('empty-state');
@@ -335,7 +334,7 @@
       listEl.innerHTML = '<div class="loading">Loading tournaments...</div>';
       
       try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from('tournaments')
           .select('*')
           .eq('registration_enabled', true)
@@ -373,10 +372,9 @@
       }
     }
 
-    // Select a tournament
     async function selectTournament(tournamentId) {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from('tournaments')
           .select('*')
           .eq('id', tournamentId)
@@ -392,13 +390,11 @@
       }
     }
 
-    // Show registration form
     function showRegistrationForm() {
       document.getElementById('lobby-view').classList.add('hidden');
       document.getElementById('registration-view').classList.remove('hidden');
       document.getElementById('header-subtitle').textContent = selectedTournament.name;
 
-      // Configure form for singles/doubles
       const isDoubles = selectedTournament.game_type === 'doubles';
       const player2Section = document.getElementById('player2-section');
       const player2Name = document.getElementById('player2-name');
@@ -416,12 +412,10 @@
         submitButton.textContent = 'Register';
       }
 
-      // Reset form
       document.getElementById('registration-form').reset();
       hideMessages();
     }
 
-    // Back to lobby
     function backToLobby() {
       document.getElementById('lobby-view').classList.remove('hidden');
       document.getElementById('registration-view').classList.add('hidden');
@@ -429,7 +423,6 @@
       selectedTournament = null;
     }
 
-    // Handle registration
     document.getElementById('registration-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       
@@ -452,7 +445,6 @@
       hideMessages();
 
       try {
-        // Check for duplicate registrations
         const checkDuplicate = async (name, email) => {
           let query = supabaseClient
             .from('players')
@@ -468,7 +460,6 @@
           return data && data.length > 0;
         };
 
-        // Check player 1
         const player1Exists = await checkDuplicate(player1Name, player1Email);
         if (player1Exists) {
           showError(`${player1Name} is already registered for this tournament!`);
@@ -477,7 +468,6 @@
           return;
         }
 
-        // Check player 2 if doubles
         if (isDoubles) {
           const player2Exists = await checkDuplicate(player2Name, player2Email);
           if (player2Exists) {
@@ -533,7 +523,6 @@
       }
     });
 
-    // Helper functions
     function formatDate(dateStr) {
       const date = new Date(dateStr);
       return date.toLocaleDateString('en-US', { 
@@ -561,10 +550,7 @@
       document.getElementById('error-message').classList.add('hidden');
     }
 
-    // Load tournaments on page load
     loadTournaments();
-
-    // Auto-refresh tournament list every 30 seconds
     setInterval(loadTournaments, 30000);
   </script>
 </body>
