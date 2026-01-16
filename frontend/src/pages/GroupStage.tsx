@@ -804,41 +804,28 @@ const GroupStage: React.FC = () => {
             <button
               className="button button-primary"
               onClick={() => {
-                const playersPerGroup = prompt('How many players advance from each group?', '2');
-                const advanceCount = parseInt(playersPerGroup || '2');
+                // Save group standings to localStorage for knockout setup
+                const standingsData: any = {};
+                groupMatchData.forEach(groupData => {
+                  standingsData[groupData.groupLetter] = {
+                    groupId: groupData.groupId,
+                    groupLetter: groupData.groupLetter,
+                    // Use manual standings if available, otherwise calculated
+                    standings: (manualStandings[groupData.groupId] || groupData.standings).map((s: any) => ({
+                      player: s.player,
+                      wins: s.wins,
+                      losses: s.losses,
+                      legDifferential: s.legDifferential,
+                      points: s.points
+                    }))
+                  };
+                });
                 
-                if (advanceCount > 0) {
-                  // Set same advancement count for all groups
-                  const counts: { [groupId: string]: number } = {};
-                  groupMatchData.forEach(group => {
-                    counts[group.groupId] = Math.min(advanceCount, group.players.length);
-                  });
-                  setAdvancementCounts(counts);
-                  
-                  // Generate bracket structure using manual standings if available
-                  const advancingPlayersByGroup: { [groupLetter: string]: Player[] } = {};
-                  groupMatchData.forEach(groupData => {
-                    const advancingCount = counts[groupData.groupId] || advanceCount;
-                    // Use manual standings if they exist, otherwise use calculated standings
-                    const standings = manualStandings[groupData.groupId] || groupData.standings;
-                    const advancingPlayers = standings
-                      .slice(0, advancingCount)
-                      .map(standing => standing.player);
-                    advancingPlayersByGroup[groupData.groupLetter] = advancingPlayers;
-                  });
-                  
-                  const firstRoundMatches = generateKnockoutBracket(advancingPlayersByGroup);
-                  const totalPlayers = firstRoundMatches.length * 2;
-                  const fullBracket = generateFullBracketStructure(firstRoundMatches, totalPlayers);
-                  
-                  // Save to localStorage for Knockout tab to use
-                  localStorage.setItem('knockoutAdvancementCount', advanceCount.toString());
-                  localStorage.setItem('knockoutAdvancementCounts', JSON.stringify(counts));
-                  localStorage.setItem('knockoutBracket', JSON.stringify(fullBracket));
-                  
-                  // Navigate to Knockout Bracket tab
-                  window.location.hash = '#/tournament/' + id + '/knockout';
-                }
+                localStorage.setItem('groupStandings', JSON.stringify(standingsData));
+                localStorage.setItem('knockoutSetupMode', 'true');
+                
+                // Navigate to Knockout Bracket tab for setup
+                window.location.hash = '#/tournament/' + id + '/knockout';
               }}
               style={{
                 background: '#22c55e',

@@ -21,12 +21,44 @@ const KnockoutBracket: React.FC = () => {
   const [score1, setScore1] = useState('');
   const [score2, setScore2] = useState('');
   const [updating, setUpdating] = useState(false);
+  
+  // Setup mode states
+  const [setupMode, setSetupMode] = useState(false);
+  const [groupStandings, setGroupStandings] = useState<any>({});
+  const [advancementCounts, setAdvancementCounts] = useState<{ [groupLetter: string]: number }>({});
+  const [seedingPlayers, setSeedingPlayers] = useState<Player[]>([]);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (id) {
-      checkAndGenerateBracket();
+      checkSetupMode();
     }
   }, [id]);
+  
+  const checkSetupMode = async () => {
+    // Check if we're in setup mode (coming from group stage)
+    const setupModeFlag = localStorage.getItem('knockoutSetupMode');
+    const standingsJson = localStorage.getItem('groupStandings');
+    
+    if (setupModeFlag === 'true' && standingsJson) {
+      // Enter setup mode
+      const standings = JSON.parse(standingsJson);
+      setGroupStandings(standings);
+      setSetupMode(true);
+      
+      // Initialize advancement counts (default 2 per group)
+      const counts: { [key: string]: number } = {};
+      Object.keys(standings).forEach(letter => {
+        counts[letter] = 2;
+      });
+      setAdvancementCounts(counts);
+      
+      setLoading(false);
+    } else {
+      // Normal mode - check for existing bracket
+      checkAndGenerateBracket();
+    }
+  };
 
   const checkAndGenerateBracket = async () => {
     if (!id) return;
@@ -137,15 +169,34 @@ const KnockoutBracket: React.FC = () => {
       // Fetch knockout matches from database (group_id IS NULL = knockout matches)
       const { data: matches, error } = await supabase
         .from('matches')
-        .select(`
-          *,
-          player1:player1_id(id, name),
-          player2:player2_id(id, name),
-          winner:winner_id(id, name)
-        `)
+        .select('*')
         .eq('tournament_id', id)
         .is('group_id', null)
         .order('created_at', { ascending: true });
+      
+      // Fetch player data separately
+      if (matches && matches.length > 0) {
+        const playerIds = new Set<string>();
+        matches.forEach(m => {
+          if (m.player1_id) playerIds.add(m.player1_id);
+          if (m.player2_id) playerIds.add(m.player2_id);
+          if (m.winner_id) playerIds.add(m.winner_id);
+        });
+        
+        const { data: players } = await supabase
+          .from('players')
+          .select('id, name')
+          .in('id', Array.from(playerIds));
+        
+        const playerMap = new Map(players?.map(p => [p.id, p]) || []);
+        
+        // Add player data to matches
+        matches.forEach((match: any) => {
+          match.player1 = match.player1_id ? playerMap.get(match.player1_id) : null;
+          match.player2 = match.player2_id ? playerMap.get(match.player2_id) : null;
+          match.winner = match.winner_id ? playerMap.get(match.winner_id) : null;
+        });
+      }
       
       if (error) {
         console.error('Database error:', error);
@@ -268,6 +319,135 @@ const KnockoutBracket: React.FC = () => {
     if (updateError) throw updateError;
     
     console.log(`✅ Advanced winner to ${nextMatch.round_name} Match ${nextMatch.board_number}`);
+  };
+
+  const generateBracketFromSetup = async () => {
+    if (!id) return;
+    
+    try {
+      setGenerating(true);
+      
+      // Collect advancing players based on selection
+      const advancingPlayersByGroup: { [groupLetter: string]: Player[] } = {};
+      
+      Object.entries(groupStandings).forEach(([letter, data]: [string, any]) => {
+        const count = advancementCounts[letter] || 2;
+        advancingPlayersByGroup[letter] = data.standings.slice(0, count).map((s: any) => s.player);
+      });
+      
+      // If user has adjusted seeding, use that order
+      let allAdvancing = seedingPlayers.length > 0 ? seedingPlayers : [];
+      if (allAdvancing.length === 0) {
+        // Flatten all advancing players in group order
+        Object.keys(advancingPlayersByGroup).sort().forEach(letter => {
+          allAdvancing.push(...advancingPlayersByGroup[letter]);
+        });
+      }
+      
+      // Generate bracket structure with crossover
+      const totalPlayers = allAdvancing.length;
+      const firstRoundMatches = [];
+      
+      // Standard tournament bracket pairing (1 vs last, 2 vs second-last, etc.)
+      for (let i = 0; i < totalPlayers / 2; i++) {
+        firstRoundMatches.push({
+          player1: allAdvancing[i],
+          player2: allAdvancing[totalPlayers - 1 - i],
+          round: 'Round 1'
+        });
+      }
+      
+      // Generate full bracket with all rounds
+      const fullBracket = generateFullBracketStructure(firstRoundMatches, totalPlayers);
+      
+      // Create matches in database
+      const matchesToCreate = fullBracket.map((match, index) => ({
+        tournament_id: id,
+        round: index + 1,
+        board_number: match.bracket_position || (index + 1),
+        player1_id: match.player1?.id || null,
+        player2_id: match.player2?.id || null,
+        player1_legs: null,
+        player2_legs: null,
+        winner_id: null,
+        status: 'pending',
+        group_id: null
+      }));
+      
+      const { data: createdMatches, error } = await supabase
+        .from('matches')
+        .insert(matchesToCreate)
+        .select();
+      
+      if (error) throw error;
+      
+      console.log('✅ Created knockout matches:', createdMatches);
+      
+      // Update tournament status
+      const { error: updateError } = await supabase
+        .from('tournaments')
+        .update({ status: 'knockout' })
+        .eq('id', id);
+      
+      if (updateError) console.error('Error updating tournament status:', updateError);
+      
+      // Clear setup mode
+      localStorage.removeItem('knockoutSetupMode');
+      localStorage.removeItem('groupStandings');
+      
+      // Reload bracket
+      setSetupMode(false);
+      await loadKnockoutMatches();
+    } catch (error) {
+      console.error('❌ Error generating bracket:', error);
+      alert('Failed to generate bracket. Please try again.');
+    } finally {
+      setGenerating(false);
+    }
+  };
+  
+  const generateFullBracketStructure = (firstRoundMatches: any[], totalPlayers: number) => {
+    const allMatches: any[] = [];
+    let matchCounter = 0;
+    let bracketPosition = 1;
+    
+    const numRounds = Math.ceil(Math.log2(totalPlayers));
+    
+    const getRoundName = (roundNumber: number, totalRounds: number) => {
+      const roundsFromEnd = totalRounds - roundNumber;
+      if (roundsFromEnd === 0) return 'Final';
+      if (roundsFromEnd === 1) return 'Semi-Final';
+      if (roundsFromEnd === 2) return 'Quarter-Final';
+      if (roundsFromEnd === 3) return 'Round of 16';
+      if (roundsFromEnd === 4) return 'Round of 32';
+      if (roundsFromEnd === 5) return 'Round of 64';
+      if (roundsFromEnd === 6) return 'Round of 128';
+      return `Round ${roundNumber}`;
+    };
+    
+    let currentRoundMatches = firstRoundMatches.map((m, i) => ({
+      ...m,
+      bracket_position: i + 1,
+      round: getRoundName(1, numRounds)
+    }));
+    
+    allMatches.push(...currentRoundMatches);
+    
+    for (let round = 2; round <= numRounds; round++) {
+      const nextRoundMatches = [];
+      for (let i = 0; i < currentRoundMatches.length; i += 2) {
+        nextRoundMatches.push({
+          player1: null,
+          player2: null,
+          round: getRoundName(round, numRounds),
+          bracket_position: allMatches.length + 1
+        });
+      }
+      allMatches.push(...nextRoundMatches);
+      currentRoundMatches = nextRoundMatches;
+    }
+    
+    return allMatches;
   };
 
   const renderBracketByRound = () => {
@@ -579,6 +759,80 @@ const KnockoutBracket: React.FC = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-slate-500">{generating ? 'Generating knockout bracket...' : 'Loading bracket...'}</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Render setup mode UI
+  if (setupMode) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+          <h2 className="text-2xl font-bold text-slate-800 mb-2">🏆 Setup Knockout Bracket</h2>
+          <p className="text-slate-600 mb-6">Select how many players advance from each group and confirm their seeding positions.</p>
+          
+          {/* Advancement Count Selection */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+            {Object.entries(groupStandings).map(([letter, data]: [string, any]) => (
+              <div key={letter} className="border border-slate-200 rounded-lg p-4">
+                <h3 className="font-bold text-lg mb-2">Group {letter}</h3>
+                <label className="block text-sm text-slate-600 mb-2">Players advancing:</label>
+                <select
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md"
+                  value={advancementCounts[letter] || 2}
+                  onChange={(e) => setAdvancementCounts({ ...advancementCounts, [letter]: parseInt(e.target.value) })}
+                >
+                  {[1, 2, 3, 4].map(num => (
+                    <option key={num} value={num}>{num} player{num > 1 ? 's' : ''}</option>
+                  ))}
+                </select>
+                
+                {/* Show advancing players */}
+                <div className="mt-3 space-y-1">
+                  <p className="text-xs font-semibold text-slate-500 uppercase">Advancing:</p>
+                  {data.standings.slice(0, advancementCounts[letter] || 2).map((s: any, idx: number) => (
+                    <div key={idx} className="flex items-center justify-between bg-green-50 px-2 py-1 rounded text-sm">
+                      <span className="font-medium">{idx + 1}. {s.player.name}</span>
+                      <span className="text-xs text-slate-500">{s.wins}W-{s.losses}L</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          {/* Preview Total Players */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <p className="text-blue-900 font-semibold">
+              Total players in knockout bracket: {Object.values(advancementCounts).reduce((sum, count) => sum + count, 0)}
+            </p>
+            <p className="text-blue-700 text-sm mt-1">
+              Players will be seeded based on their group standings with standard tournament crossover.
+            </p>
+          </div>
+          
+          {/* Generate Bracket Button */}
+          <div className="flex justify-center gap-4">
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                localStorage.removeItem('knockoutSetupMode');
+                localStorage.removeItem('groupStandings');
+                setSetupMode(false);
+                checkAndGenerateBracket();
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={generateBracketFromSetup}
+              disabled={generating}
+            >
+              {generating ? 'Generating Bracket...' : '🏆 Generate Knockout Bracket'}
+            </button>
+          </div>
         </div>
       </div>
     );
