@@ -28,6 +28,13 @@ const KnockoutBracket: React.FC = () => {
   const [advancementCounts, setAdvancementCounts] = useState<{ [groupLetter: string]: number }>({});
   const [seedingPlayers, setSeedingPlayers] = useState<Player[]>([]);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // Helper: Get next power of 2 for bracket size
+  const getBracketSize = (playerCount: number): number => {
+    if (playerCount <= 2) return 2;
+    return Math.pow(2, Math.ceil(Math.log2(playerCount)));
+  };
 
   useEffect(() => {
     if (id) {
@@ -344,17 +351,39 @@ const KnockoutBracket: React.FC = () => {
         });
       }
       
-      // Generate bracket structure with crossover
-      const totalPlayers = allAdvancing.length;
+      // Generate bracket structure with byes for non-power-of-2 counts
+      const bracketSize = getBracketSize(allAdvancing.length);
+      const numByes = bracketSize - allAdvancing.length;
+      
+      console.log(`📊 Bracket size: ${bracketSize}, Players: ${allAdvancing.length}, Byes: ${numByes}`);
+      
+      // Create seeded slots with nulls for byes (byes go at the end)
+      const seededSlots: (Player | null)[] = [...allAdvancing];
+      for (let i = 0; i < numByes; i++) {
+        seededSlots.push(null);
+      }
+      
       const firstRoundMatches = [];
       
       // Standard tournament bracket pairing (1 vs last, 2 vs second-last, etc.)
-      for (let i = 0; i < totalPlayers / 2; i++) {
-        firstRoundMatches.push({
-          player1: allAdvancing[i],
-          player2: allAdvancing[totalPlayers - 1 - i],
-          round: 'Round 1'
-        });
+      for (let i = 0; i < bracketSize / 2; i++) {
+        const p1 = seededSlots[i];
+        const p2 = seededSlots[bracketSize - 1 - i];
+        
+        const match: any = {
+          player1: p1,
+          player2: p2,
+          round: 'Round 1',
+          isBye: p1 === null || p2 === null
+        };
+        
+        // If one player is null (bye), the other auto-advances
+        if (match.isBye) {
+          match.winner = p1 || p2;
+          match.status = 'completed';
+        }
+        
+        firstRoundMatches.push(match);
       }
       
       // Generate full bracket with all rounds
@@ -367,10 +396,10 @@ const KnockoutBracket: React.FC = () => {
         board_number: match.bracket_position || (index + 1),
         player1_id: match.player1?.id || null,
         player2_id: match.player2?.id || null,
-        player1_legs: null,
-        player2_legs: null,
-        winner_id: null,
-        status: 'pending',
+        player1_legs: match.isBye ? null : null,
+        player2_legs: match.isBye ? null : null,
+        winner_id: match.winner?.id || null,
+        status: match.isBye ? 'completed' : 'pending',
         group_id: null
       }));
       
@@ -436,9 +465,16 @@ const KnockoutBracket: React.FC = () => {
     for (let round = 2; round <= numRounds; round++) {
       const nextRoundMatches = [];
       for (let i = 0; i < currentRoundMatches.length; i += 2) {
+        const match1 = currentRoundMatches[i];
+        const match2 = currentRoundMatches[i + 1];
+        
+        // Auto-advance bye winners to next round
+        const p1 = match1?.winner || null;
+        const p2 = match2?.winner || null;
+        
         nextRoundMatches.push({
-          player1: null,
-          player2: null,
+          player1: p1,
+          player2: p2,
           round: getRoundName(round, numRounds),
           bracket_position: allMatches.length + 1
         });
@@ -497,21 +533,35 @@ const KnockoutBracket: React.FC = () => {
 
     return (
       <div className="relative py-12 bg-slate-50 min-h-screen overflow-auto">
-        {/* Bracket Info Bar */}
-        <div className="fixed top-0 left-0 right-0 bg-white border-b border-slate-200 px-6 py-3 flex justify-between items-center z-50">
-          <div>
-            <h1 className="text-lg font-bold text-slate-800">Tournament Bracket</h1>
-            <p className="text-xs text-slate-500 uppercase tracking-widest">
-              {totalPlayers} Players • {totalRounds} Rounds • Click any match to enter scores
-            </p>
-          </div>
-          {champion && (
-            <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-300 px-4 py-2 rounded-lg">
-              <Trophy className="w-4 h-4 text-yellow-600" />
-              <span className="text-xs font-bold text-yellow-600 uppercase">Champion:</span>
-              <span className="text-sm font-black text-slate-800">{champion.name}</span>
+        {/* Bracket Info Bar with Search */}
+        <div className="fixed top-0 left-0 right-0 bg-white border-b border-slate-200 px-6 py-3 z-50">
+          <div className="flex justify-between items-center gap-4">
+            <div className="flex-1">
+              <h1 className="text-lg font-bold text-slate-800">Tournament Bracket</h1>
+              <p className="text-xs text-slate-500 uppercase tracking-widest">
+                {totalPlayers} Players • {totalRounds} Rounds • Click any match to enter scores
+              </p>
             </div>
-          )}
+            
+            {/* Search Bar */}
+            <div className="flex-1 max-w-md">
+              <input
+                type="text"
+                placeholder="🔍 Search player name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            
+            {champion && (
+              <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-300 px-4 py-2 rounded-lg">
+                <Trophy className="w-4 h-4 text-yellow-600" />
+                <span className="text-xs font-bold text-yellow-600 uppercase">Champion:</span>
+                <span className="text-sm font-black text-slate-800">{champion.name}</span>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center justify-center pt-16" style={{ gap: `${roundGap}px`, minWidth: 'max-content', padding: `64px ${roundGap}px` }}>
@@ -530,13 +580,22 @@ const KnockoutBracket: React.FC = () => {
                 
                 {/* Matches Column */}
                 <div className="flex flex-col" style={{ gap: `${verticalGap}px` }}>
-                  {matches.map((match, matchIndex) => (
+                  {matches.map((match, matchIndex) => {
+                    // Check if this match should be highlighted by search
+                    const isSearchMatch = searchTerm.length > 0 && (
+                      match.player1?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      match.player2?.name.toLowerCase().includes(searchTerm.toLowerCase())
+                    );
+                    
+                    return (
                     <div key={match.id} className="relative">
                       {/* Match Card - Clickable for scoring */}
                       <div 
                         onClick={() => handleMatchClick(match)}
                         className={`bg-white border-2 rounded-xl shadow-lg transition-all duration-200 w-56 ${
-                          match.player1 && match.player2 && match.status !== 'completed'
+                          isSearchMatch
+                            ? 'ring-4 ring-blue-400 border-blue-500 shadow-2xl scale-105'
+                            : match.player1 && match.player2 && match.status !== 'completed'
                             ? 'border-blue-300 cursor-pointer hover:border-blue-500 hover:-translate-y-0.5 hover:shadow-xl'
                             : match.status === 'completed'
                             ? 'border-slate-200'
@@ -660,7 +719,8 @@ const KnockoutBracket: React.FC = () => {
                         </svg>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -810,6 +870,16 @@ const KnockoutBracket: React.FC = () => {
             <p className="text-blue-700 text-sm mt-1">
               Players will be seeded based on their group standings with standard tournament crossover.
             </p>
+            {(() => {
+              const totalPlayers = Object.values(advancementCounts).reduce((sum, count) => sum + count, 0);
+              const bracketSize = getBracketSize(totalPlayers);
+              const numByes = bracketSize - totalPlayers;
+              return numByes > 0 ? (
+                <p className="text-blue-700 text-sm mt-2 font-semibold">
+                  ⚡ {numByes} bye{numByes > 1 ? 's' : ''} will be assigned (bracket size: {bracketSize}) - Top seeds automatically advance to Round 2
+                </p>
+              ) : null;
+            })()}
           </div>
           
           {/* Generate Bracket Button */}

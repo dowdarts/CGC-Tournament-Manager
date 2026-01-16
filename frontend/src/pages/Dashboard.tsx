@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TournamentService, PlayerService } from '@/services/api';
 import { Tournament } from '@/types';
-import { Plus, Play, Trash2, Users } from 'lucide-react';
+import { Plus, Play, Trash2, Users, HelpCircle, X } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -11,6 +11,7 @@ const Dashboard: React.FC = () => {
   const [teamCounts, setTeamCounts] = useState<{ [key: string]: number }>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
     loadTournaments();
@@ -91,8 +92,51 @@ const Dashboard: React.FC = () => {
 
   return (
     <div>
+      {/* Help Guide */}
+      {showHelp && (
+        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-lg relative">
+          <button
+            onClick={() => setShowHelp(false)}
+            className="absolute top-2 right-2 text-blue-600 hover:text-blue-800"
+            title="Close help"
+          >
+            <X size={20} />
+          </button>
+          <div className="flex items-start gap-3">
+            <HelpCircle size={24} className="text-blue-600 flex-shrink-0 mt-1" />
+            <div>
+              <h3 className="font-bold text-blue-900 mb-2">Tournament Lobby - Main Dashboard</h3>
+              <div className="text-blue-800 space-y-2 text-sm">
+                <p>
+                  <strong>Welcome to your Tournament Management Hub!</strong> This is your central command center where you can access and manage all your tournaments.
+                </p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li><strong>Create New Tournaments:</strong> Click the "New Tournament" button to set up a new event with custom settings</li>
+                  <li><strong>Manage Tournaments:</strong> Click "Manage" to access tournament setup, registration, group stage, and knockout brackets</li>
+                  <li><strong>Board Manager:</strong> Click "Boards" to assign matches to physical board numbers and manage match flow</li>
+                  <li><strong>Smart Navigation:</strong> The system automatically takes you to the right stage of your tournament (setup, group stage, or knockout)</li>
+                  <li><strong>View at a Glance:</strong> See player counts, game type (singles/doubles), and tournament status badges for each event</li>
+                </ul>
+                <p className="mt-3 italic">
+                  💡 Tip: All tournament tabs open in new windows so you can manage multiple tournaments simultaneously!
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1>My Tournaments</h1>
+        <div className="flex items-center gap-3">
+          <h1>My Tournaments</h1>
+          <button
+            onClick={() => setShowHelp(!showHelp)}
+            className="text-blue-600 hover:text-blue-800 transition-colors"
+            title={showHelp ? "Hide help guide" : "Show help guide"}
+          >
+            <HelpCircle size={24} />
+          </button>
+        </div>
         <button
           onClick={() => navigate('/tournament/new/info')}
           className="button button-primary button-large"
