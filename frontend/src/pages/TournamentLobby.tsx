@@ -4,6 +4,7 @@ import { TournamentService, PlayerService } from '@/services/api';
 import { Tournament } from '@/types';
 import { Calendar, MapPin, Users, ArrowRight, Clock, DollarSign, AlertCircle } from 'lucide-react';
 import { supabase } from '@/services/supabase';
+import { getLogoUrl } from '@/utils/assets';
 
 const TournamentLobby: React.FC = () => {
   const navigate = useNavigate();
@@ -149,7 +150,7 @@ const TournamentLobby: React.FC = () => {
         borderBottom: '3px solid #667eea'
       }}>
         <img 
-          src="/CGC-Tournament-Manager/Tournament manager logo.png"
+          src={getLogoUrl()}
           alt="Tournament Manager" 
           style={{ 
             maxWidth: '100%',

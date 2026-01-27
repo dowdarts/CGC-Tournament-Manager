@@ -3,6 +3,7 @@ import { Player } from '@/types';
 import { UserPlus, Users } from 'lucide-react';
 import { capitalizePlayerName } from '@/utils/nameFormatter';
 import { EmailService } from '@/services/EmailService';
+import { getLogoUrl } from '@/utils/assets';
 
 interface SelfRegistrationFormProps {
   tournamentId: string;
@@ -125,7 +126,7 @@ const SelfRegistrationForm: React.FC<SelfRegistrationFormProps> = ({
     <div className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
       <div style={{ textAlign: 'center', marginBottom: '30px' }}>
         <img 
-          src="/CGC-Tournament-Manager/Tournament manager logo.png"
+          src={getLogoUrl()}
           alt="Tournament Manager" 
           style={{ 
             maxWidth: '100%',

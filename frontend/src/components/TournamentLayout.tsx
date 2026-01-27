@@ -3,6 +3,7 @@ import { Link, useLocation, useParams, useNavigate } from 'react-router-dom';
 import { Menu, ChevronDown, Home, Info, Lock } from 'lucide-react';
 import { TournamentService } from '@/services/api';
 import { Tournament } from '@/types';
+import { getLogoUrl } from '@/utils/assets';
 import '../App.css';
 
 interface TournamentLayoutProps {
@@ -146,7 +147,7 @@ const TournamentLayout: React.FC<TournamentLayoutProps> = ({ children }) => {
         borderBottom: '3px solid #667eea'
       }}>
         <img 
-          src="/CGC-Tournament-Manager/Tournament manager logo.png" 
+          src={getLogoUrl()} 
           alt="Tournament Manager" 
           style={{ 
             maxWidth: '100%',

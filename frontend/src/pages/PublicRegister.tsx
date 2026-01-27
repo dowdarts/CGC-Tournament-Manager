@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import SelfRegistrationForm from '@/components/SelfRegistrationForm';
 import { TournamentService, PlayerService } from '@/services/api';
 import { Tournament, Player } from '@/types';
+import { getLogoUrl } from '@/utils/assets';
 
 const PublicRegister: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -97,7 +98,7 @@ const PublicRegister: React.FC = () => {
         boxShadow: '0 4px 20px rgba(255, 102, 0, 0.3)'
       }}>
         <img 
-          src="/CGC-Tournament-Manager/Tournament manager logo.png"
+          src={getLogoUrl()}
           alt="Tournament Manager" 
           style={{ 
             maxWidth: '100%',

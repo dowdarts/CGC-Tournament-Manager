@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, Settings, LogOut, Archive, CheckCircle, Home } from 'lucide-react';
+import { getLogoUrl } from '@/utils/assets';
 import '../App.css';
 
 interface LayoutProps {
@@ -26,7 +27,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         borderBottom: '3px solid #667eea'
       }}>
         <img 
-          src="/CGC-Tournament-Manager/Tournament manager logo.png" 
+          src={getLogoUrl()} 
           alt="Tournament Manager" 
           style={{ 
             maxWidth: '100%',
