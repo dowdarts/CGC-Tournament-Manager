@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { TournamentService, PlayerService, GroupService, MatchService } from '@/services/api';
+import { TournamentService, PlayerService, GroupService, MatchService, DartConnectService } from '@/services/api';
 import { supabase } from '@/services/supabase';
-import { Tournament, Player, Group, Match, Board } from '@/types';
-import { Trophy, Users, Eye, X, PlayCircle } from 'lucide-react';
+import { Tournament, Player, Group, Match, Board, PendingMatchResult } from '@/types';
+import { Trophy, Users, Eye, X, PlayCircle, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import PostRoundRobinConfig from '@/components/PostRoundRobinConfig';
 import { EmailService } from '@/services/EmailService';
 
@@ -55,6 +55,11 @@ const GroupStage: React.FC = () => {
   const [manualStandings, setManualStandings] = useState<{ [groupId: string]: any[] }>({});
   const [activeGroupTabs, setActiveGroupTabs] = useState<{ [groupId: string]: 'standings' | 'matches' }>({});
   const [scrollPosition, setScrollPosition] = useState(0);
+  
+  // DartConnect Pending Results
+  const [pendingResults, setPendingResults] = useState<PendingMatchResult[]>([]);
+  const [loadingPending, setLoadingPending] = useState(false);
+  const [approvingResult, setApprovingResult] = useState<string | null>(null);
   
   // Initial setup states (format + boards)
   const [setupComplete, setSetupComplete] = useState(false);

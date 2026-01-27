@@ -4,6 +4,7 @@ import { TournamentService, BoardService, GroupService } from '@/services/api';
 import { Tournament, Board, Group } from '@/types';
 import { Settings as SettingsIcon, Info, ArrowUp, ArrowDown, Trash2, Grid, User, Shield } from 'lucide-react';
 import AccountSettings from '@/components/AccountSettings';
+import DartConnectSettings from '@/components/DartConnectSettings';
 
 const Settings: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -574,6 +575,9 @@ const Settings: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* DartConnect Live Scoring Integration */}
+      <DartConnectSettings tournament={tournament} onUpdate={loadTournament} />
 
       {/* Save Button */}
       <div style={{ display: 'flex', gap: '10px' }}>
