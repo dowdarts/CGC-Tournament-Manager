@@ -370,7 +370,7 @@
   color: #ffffff;
 }
 
-.watch-code-form {
+.auto-detection-info {
   background: #0a0a0a;
   border: 1px solid #2a2a2a;
   border-radius: 8px;
@@ -378,67 +378,74 @@
   margin-top: 1rem;
 }
 
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.form-field {
+.info-box {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
 }
 
-.form-field label {
-  font-size: 0.9rem;
+.info-box h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+  color: #22c55e;
+}
+
+.info-box ol {
+  margin: 0;
+  padding-left: 1.5rem;
   color: #ccc;
-  font-weight: 500;
+  line-height: 1.8;
 }
 
-.input-field {
-  background: #1a1a1a;
-  border: 2px solid #2a2a2a;
+.info-box ol li {
+  margin-bottom: 0.5rem;
+}
+
+.info-box ol li strong {
+  color: #3b82f6;
+}
+
+.matching-details {
+  background: rgba(59, 130, 246, 0.05);
+  border: 1px solid rgba(59, 130, 246, 0.2);
   border-radius: 6px;
-  padding: 0.75rem;
+  padding: 1rem;
+}
+
+.matching-details h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.95rem;
+  color: #3b82f6;
+}
+
+.matching-details ul {
+  margin: 0 0 1rem 0;
+  padding-left: 1.5rem;
+  color: #ccc;
+  line-height: 1.6;
+}
+
+.matching-details ul li {
+  margin-bottom: 0.5rem;
+}
+
+.matching-details ul li strong {
   color: #ffffff;
-  font-size: 0.95rem;
-  transition: border-color 0.2s;
 }
 
-.input-field:focus {
-  outline: none;
-  border-color: #3b82f6;
+.matching-details .note {
+  margin: 0;
+  padding: 0.75rem;
+  background: rgba(245, 158, 11, 0.1);
+  border-left: 3px solid #f59e0b;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: #f59e0b;
+  line-height: 1.5;
 }
 
-.input-field::placeholder {
-  color: #666;
-}
-
-.btn-link-watch-code {
-  background: #3b82f6;
-  color: white;
-  border: none;
-  padding: 0.9rem 1.5rem;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  width: 100%;
-}
-
-.btn-link-watch-code:hover:not(:disabled) {
-  background: #2563eb;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
-}
-
-.btn-link-watch-code:disabled {
-  background: #2a2a2a;
-  color: #666;
-  cursor: not-allowed;
+.matching-details .note strong {
+  color: #fbbf24;
 }
 
 /* Responsive */

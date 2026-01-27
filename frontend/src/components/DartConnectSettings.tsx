@@ -32,9 +32,6 @@ export default function DartConnectSettings({ tournament, onUpdate }: DartConnec
   );
   const [pendingCount, setPendingCount] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [watchCode, setWatchCode] = useState('');
-  const [matchId, setMatchId] = useState('');
-  const [linkingWatchCode, setLinkingWatchCode] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'checking'>('disconnected');
   const [connectionLog, setConnectionLog] = useState<string[]>([]);
 
@@ -67,30 +64,6 @@ export default function DartConnectSettings({ tournament, onUpdate }: DartConnec
     } catch (error) {
       setConnectionStatus('disconnected');
       addLog('✗ Server connection failed');
-    }
-  };
-
-  const handleLinkWatchCode = async () => {
-    if (!watchCode.trim() || !matchId.trim()) {
-      alert('Please enter both watch code and match ID');
-      return;
-    }
-
-    try {
-      setLinkingWatchCode(true);
-      addLog(`Linking watch code ${watchCode} to match ${matchId}...`);
-      
-      await DartConnectService.setMatchWatchCode(matchId, tournament.id, watchCode, autoAccept);
-      
-      addLog(`✓ Watch code linked successfully`);
-      alert('Watch code linked to match successfully!');
-      setWatchCode('');
-      setMatchId('');
-    } catch (error: any) {
-      addLog(`✗ Failed to link watch code: ${error.message}`);
-      alert(`Failed to link watch code: ${error.message}`);
-    } finally {
-      setLinkingWatchCode(false);
     }
   };
 
@@ -202,54 +175,45 @@ export default function DartConnectSettings({ tournament, onUpdate }: DartConnec
               )}
             </div>
 
-            {/* Watch Code Input */}
+            {/* Automatic Match Detection Info */}
             {connectionStatus === 'connected' && (
               <>
                 <div className="setting-divider"></div>
                 <div className="watch-code-section">
                   <div className="section-title">
-                    <Play size={20} className="icon-primary" />
-                    <h3>Link Match to DCTV Watch Code</h3>
+                    <Play size={20} className="icon-success" />
+                    <h3>Automatic Match Detection Active</h3>
                   </div>
                   <p className="section-description">
-                    Enter the DartConnect TV watch code and match ID to track live scores. 
-                    The watch code will be converted to an alley_id for score tracking.
+                    The scraper automatically identifies tournament matches by matching player names from DartConnect TV with your scheduled matches. No manual linking required!
                   </p>
                   
-                  <div className="watch-code-form">
-                    <div className="form-row">
-                      <div className="form-field">
-                        <label htmlFor="watchCode">DCTV Watch Code</label>
-                        <input
-                          id="watchCode"
-                          type="text"
-                          placeholder="e.g., ABC123"
-                          value={watchCode}
-                          onChange={(e) => setWatchCode(e.target.value.toUpperCase())}
-                          className="input-field"
-                        />
-                      </div>
-                      
-                      <div className="form-field">
-                        <label htmlFor="matchId">Match ID</label>
-                        <input
-                          id="matchId"
-                          type="text"
-                          placeholder="Match UUID"
-                          value={matchId}
-                          onChange={(e) => setMatchId(e.target.value)}
-                          className="input-field"
-                        />
+                  <div className="auto-detection-info">
+                    <div className="info-box">
+                      <CheckCircle size={18} className="icon-success" />
+                      <div>
+                        <h4>How It Works:</h4>
+                        <ol>
+                          <li>Start a match on DartConnect scoring tablets with the DCTV watch code</li>
+                          <li>Run the scraper with your tournament ID and watch code</li>
+                          <li><strong>Player names are automatically extracted</strong> from DartConnect</li>
+                          <li><strong>System finds the matching scheduled match</strong> using intelligent name matching</li>
+                          <li>When match completes, results appear in Match Results Manager for approval</li>
+                        </ol>
                       </div>
                     </div>
                     
-                    <button
-                      className="btn-link-watch-code"
-                      onClick={handleLinkWatchCode}
-                      disabled={linkingWatchCode || !watchCode.trim() || !matchId.trim()}
-                    >
-                      {linkingWatchCode ? 'Linking...' : 'Link Watch Code to Match'}
-                    </button>
+                    <div className="matching-details">
+                      <h4>Player Name Matching:</h4>
+                      <ul>
+                        <li><strong>Exact Match (100% confidence):</strong> Player names match exactly</li>
+                        <li><strong>High Confidence (90%+):</strong> Close match using fuzzy matching (handles typos, spacing)</li>
+                        <li><strong>Partial Match (&lt;90%):</strong> Similar names but requires manual review</li>
+                      </ul>
+                      <p className="note">
+                        💡 <strong>Tip:</strong> Use consistent player names in both DartConnect and your tournament registration for best auto-detection accuracy
+                      </p>
+                    </div>
                   </div>
                 </div>
               </>
