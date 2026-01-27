@@ -1,18 +1,13 @@
 /**
  * Get the base URL for assets
- * This handles both GitHub Pages deployment and local development
+ * This handles both GitHub Pages deployment and custom domain
  */
 export const getAssetUrl = (path: string): string => {
   // Remove leading slash if present
   const cleanPath = path.startsWith('/') ? path.slice(1) : path;
   
-  // In development, use root path
-  if (import.meta.env.DEV) {
-    return `/${cleanPath}`;
-  }
-  
-  // In production (GitHub Pages), use base URL
-  return `/CGC-Tournament-Manager/${cleanPath}`;
+  // Always use root path for custom domain
+  return `/${cleanPath}`;
 };
 
 /**
