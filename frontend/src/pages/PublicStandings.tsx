@@ -47,11 +47,15 @@ const PublicStandings: React.FC = () => {
 
   const loadTournaments = async () => {
     try {
-      // Get all tournaments with show_standings_on_display enabled (any status)
+      // Get tournaments with show_standings_on_display enabled
+      // and recent match activity (within last hour)
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      
       const { data, error } = await supabase
         .from('tournaments')
         .select('*')
         .eq('show_standings_on_display', true)
+        .gte('updated_at', oneHourAgo)
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
