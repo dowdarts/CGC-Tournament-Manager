@@ -6,8 +6,10 @@ export const getAssetUrl = (path: string): string => {
   // Remove leading slash if present
   const cleanPath = path.startsWith('/') ? path.slice(1) : path;
   
-  // Always use root path for custom domain
-  return `/${cleanPath}`;
+  // Use import.meta.env.BASE_URL which is set by Vite config
+  // This will be '/CGC-Tournament-Manager/' for GitHub Pages or '/' for custom domain
+  const base = import.meta.env.BASE_URL || '/';
+  return `${base}${cleanPath}`;
 };
 
 /**
