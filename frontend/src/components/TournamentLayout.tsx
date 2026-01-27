@@ -130,6 +130,7 @@ const TournamentLayout: React.FC<TournamentLayoutProps> = ({ children }) => {
     { path: `/tournament/${id}/groups`, label: 'Group Stage', icon: '🎯', tooltip: 'Run the group stage matches and track scores for round-robin play' },
     { path: `/tournament/${id}/bracket`, label: 'Knockout Bracket', icon: '🏆', tooltip: 'View and manage the knockout bracket for playoff rounds' },
     { path: `/tournament/${id}/standings`, label: 'Group Standings', icon: '🏆', tooltip: 'View group standings and stats' },
+    { path: `/tournament/${id}/match-results`, label: 'Match Results', icon: '📊', tooltip: 'Review and approve DartConnect match results from live scoring tablets' },
     { path: `/tournament/${id}/settings`, label: 'Settings', icon: '⚙️', tooltip: 'Configure match format, board assignments, and scoring rules for this tournament' },
     { path: `/tournament/${id}/display-links`, label: 'Display URLs', icon: '🔗', tooltip: 'Get shareable links for tournament display and registration portal' },
     { path: `/tournament/${id}/paycal`, label: 'Paycal', icon: '💰', tooltip: 'Calculate and manage tournament prize distributions and player payouts' },
