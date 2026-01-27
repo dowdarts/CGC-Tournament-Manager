@@ -47,12 +47,11 @@ const PublicStandings: React.FC = () => {
 
   const loadTournaments = async () => {
     try {
-      // Get all active tournaments with show_standings_on_display enabled
+      // Get all tournaments with show_standings_on_display enabled (any status)
       const { data, error } = await supabase
         .from('tournaments')
         .select('*')
         .eq('show_standings_on_display', true)
-        .in('status', ['active', 'in_progress'])
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
