@@ -85,7 +85,8 @@ CREATE TABLE IF NOT EXISTS match_watch_codes (
 ALTER TABLE tournaments
 ADD COLUMN IF NOT EXISTS dartconnect_integration_enabled BOOLEAN DEFAULT FALSE,
 ADD COLUMN IF NOT EXISTS dartconnect_auto_accept_scores BOOLEAN DEFAULT FALSE,
-ADD COLUMN IF NOT EXISTS dartconnect_require_manual_approval BOOLEAN DEFAULT TRUE;
+ADD COLUMN IF NOT EXISTS dartconnect_require_manual_approval BOOLEAN DEFAULT TRUE,
+ADD COLUMN IF NOT EXISTS dartconnect_watch_codes TEXT[] DEFAULT ARRAY[]::TEXT[]; -- Up to 4 active watch codes
 
 -- =====================================================================
 -- 4. Scraper Sessions Update
@@ -155,7 +156,12 @@ ALTER TABLE pending_match_results ENABLE ROW LEVEL SECURITY;
 ALTER TABLE match_watch_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE match_score_history ENABLE ROW LEVEL SECURITY;
 
--- Allow all operations for authenticated users (you can make this more restrictive)
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON pending_match_results;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON match_watch_codes;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON match_score_history;
+
+-- Create policies (allow all operations for authenticated users)
 CREATE POLICY "Allow all for authenticated users" ON pending_match_results
   FOR ALL USING (true);
 
