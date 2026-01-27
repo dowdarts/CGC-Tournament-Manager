@@ -74,11 +74,17 @@ export default function DartConnectSettings({ tournament, onUpdate }: DartConnec
       // Filter out empty codes
       const activeCodes = watchCodes.filter(code => code.trim() !== '');
       
-      await DartConnectService.updateDartConnectSettings(tournament.id, {
+      // Include ALL dartconnect settings to prevent them from being lost
+      const updates = {
+        dartconnect_integration_enabled: integrationEnabled,
+        dartconnect_auto_accept_scores: autoAccept,
+        dartconnect_require_manual_approval: requireManualApproval,
         dartconnect_watch_codes: watchCodes
-      });
+      };
       
-      onUpdate({ dartconnect_watch_codes: watchCodes });
+      await DartConnectService.updateDartConnectSettings(tournament.id, updates);
+      
+      onUpdate(updates);
       
       addLog(`✓ Saved ${activeCodes.length} watch code(s)`);
       alert(`Watch codes saved! Active codes: ${activeCodes.length}`);
@@ -127,7 +133,8 @@ export default function DartConnectSettings({ tournament, onUpdate }: DartConnec
       const updates = {
         dartconnect_integration_enabled: integrationEnabled,
         dartconnect_auto_accept_scores: autoAccept,
-        dartconnect_require_manual_approval: requireManualApproval
+        dartconnect_require_manual_approval: requireManualApproval,
+        dartconnect_watch_codes: watchCodes // Include watch codes in main save too
       };
       
       await DartConnectService.updateDartConnectSettings(tournament.id, updates);
