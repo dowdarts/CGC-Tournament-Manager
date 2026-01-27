@@ -23,6 +23,7 @@ export interface Tournament {
   dartconnect_integration_enabled?: boolean; // Enable live scraping integration
   dartconnect_auto_accept_scores?: boolean; // Auto-accept scores with high confidence
   dartconnect_require_manual_approval?: boolean; // Require manual approval for all scores
+  dartconnect_watch_codes?: string[]; // Active DCTV watch codes (up to 4)
   
   // Workflow steps
   setup_completed?: boolean;

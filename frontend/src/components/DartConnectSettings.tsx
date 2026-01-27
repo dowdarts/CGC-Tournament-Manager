@@ -34,9 +34,12 @@ export default function DartConnectSettings({ tournament, onUpdate }: DartConnec
   const [saving, setSaving] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'checking'>('disconnected');
   const [connectionLog, setConnectionLog] = useState<string[]>([]);
+  const [watchCodes, setWatchCodes] = useState<string[]>(['', '', '', '']);
+  const [savingWatchCodes, setSavingWatchCodes] = useState(false);
 
   useEffect(() => {
     loadPendingCount();
+    loadWatchCodes();
     if (integrationEnabled) {
       checkConnection();
       // Check connection every 30 seconds
@@ -44,6 +47,48 @@ export default function DartConnectSettings({ tournament, onUpdate }: DartConnec
       return () => clearInterval(interval);
     }
   }, [tournament.id, integrationEnabled]);
+
+  const loadWatchCodes = () => {
+    // Load watch codes from tournament settings if available
+    if (tournament.dartconnect_watch_codes && Array.isArray(tournament.dartconnect_watch_codes)) {
+      setWatchCodes([
+        tournament.dartconnect_watch_codes[0] || '',
+        tournament.dartconnect_watch_codes[1] || '',
+        tournament.dartconnect_watch_codes[2] || '',
+        tournament.dartconnect_watch_codes[3] || ''
+      ]);
+    }
+  };
+
+  const handleWatchCodeChange = (index: number, value: string) => {
+    const newCodes = [...watchCodes];
+    newCodes[index] = value.toUpperCase();
+    setWatchCodes(newCodes);
+  };
+
+  const handleSaveWatchCodes = async () => {
+    try {
+      setSavingWatchCodes(true);
+      addLog('Saving watch codes...');
+      
+      // Filter out empty codes
+      const activeCodes = watchCodes.filter(code => code.trim() !== '');
+      
+      await DartConnectService.updateDartConnectSettings(tournament.id, {
+        dartconnect_watch_codes: watchCodes
+      });
+      
+      onUpdate({ dartconnect_watch_codes: watchCodes });
+      
+      addLog(`✓ Saved ${activeCodes.length} watch code(s)`);
+      alert(`Watch codes saved! Active codes: ${activeCodes.length}`);
+    } catch (error: any) {
+      addLog(`✗ Failed to save watch codes: ${error.message}`);
+      alert(`Failed to save watch codes: ${error.message}`);
+    } finally {
+      setSavingWatchCodes(false);
+    }
+  };
 
   const addLog = (message: string) => {
     const timestamp = new Date().toLocaleTimeString();
@@ -175,49 +220,111 @@ export default function DartConnectSettings({ tournament, onUpdate }: DartConnec
               )}
             </div>
 
-            {/* Automatic Match Detection Info */}
+            {/* Watch Code Inputs for Multiple Tablets */}
             {connectionStatus === 'connected' && (
               <>
                 <div className="setting-divider"></div>
                 <div className="watch-code-section">
                   <div className="section-title">
-                    <Play size={20} className="icon-success" />
-                    <h3>Automatic Match Detection Active</h3>
+                    <Play size={20} className="icon-primary" />
+                    <h3>Active Watch Codes (Up to 4 Tablets)</h3>
                   </div>
                   <p className="section-description">
-                    The scraper automatically identifies tournament matches by matching player names from DartConnect TV with your scheduled matches. No manual linking required!
+                    Enter the DartConnect TV watch codes for matches currently in progress. 
+                    The scraper will monitor all active codes and automatically capture results when matches complete.
                   </p>
                   
-                  <div className="auto-detection-info">
-                    <div className="info-box">
-                      <CheckCircle size={18} className="icon-success" />
-                      <div>
-                        <h4>How It Works:</h4>
-                        <ol>
-                          <li>Start a match on DartConnect scoring tablets with the DCTV watch code</li>
-                          <li>Run the scraper with your tournament ID and watch code</li>
-                          <li><strong>Player names are automatically extracted</strong> from DartConnect</li>
-                          <li><strong>System finds the matching scheduled match</strong> using intelligent name matching</li>
-                          <li>When match completes, results appear in Match Results Manager for approval</li>
-                        </ol>
+                  <div className="watch-codes-grid">
+                    {watchCodes.map((code, index) => (
+                      <div key={index} className="watch-code-input-group">
+                        <label htmlFor={`watchCode${index + 1}`}>
+                          Tablet {index + 1} / Board {index + 1}
+                        </label>
+                        <input
+                          id={`watchCode${index + 1}`}
+                          type="text"
+                          placeholder="e.g., ABC123"
+                          value={code}
+                          onChange={(e) => handleWatchCodeChange(index, e.target.value)}
+                          className="watch-code-input"
+                          maxLength={10}
+                        />
+                        {code.trim() && (
+                          <span className="code-active-badge">
+                            <CheckCircle size={14} />
+                            Active
+                          </span>
+                        )}
                       </div>
-                    </div>
-                    
-                    <div className="matching-details">
-                      <h4>Player Name Matching:</h4>
-                      <ul>
-                        <li><strong>Exact Match (100% confidence):</strong> Player names match exactly</li>
-                        <li><strong>High Confidence (90%+):</strong> Close match using fuzzy matching (handles typos, spacing)</li>
-                        <li><strong>Partial Match (&lt;90%):</strong> Similar names but requires manual review</li>
-                      </ul>
-                      <p className="note">
-                        💡 <strong>Tip:</strong> Use consistent player names in both DartConnect and your tournament registration for best auto-detection accuracy
-                      </p>
-                    </div>
+                    ))}
+                  </div>
+                  
+                  <button
+                    className="btn-save-watch-codes"
+                    onClick={handleSaveWatchCodes}
+                    disabled={savingWatchCodes}
+                  >
+                    {savingWatchCodes ? 'Saving...' : 'Save Watch Codes'}
+                  </button>
+                  
+                  <div className="watch-code-info">
+                    <AlertCircle size={16} />
+                    <p>
+                      After saving, run the scraper for each active watch code. 
+                      The scraper will monitor all matches and auto-detect which tournament match 
+                      corresponds to each watch code based on player names.
+                    </p>
                   </div>
                 </div>
               </>
             )}
+
+            <div className="setting-divider"></div>
+
+            {/* Automatic Match Detection Info */}
+            <div className="watch-code-section">
+              <div className="section-title">
+                <CheckCircle size={20} className="icon-success" />
+                <h3>Automatic Match Detection</h3>
+              </div>
+              <p className="section-description">
+                The scraper automatically identifies tournament matches by matching player names from DartConnect TV with your scheduled matches. No manual linking required!
+              </p>
+              
+              <div className="auto-detection-info">
+                <div className="info-box">
+                  <CheckCircle size={18} className="icon-success" />
+                  <div>
+                    <h4>How It Works:</h4>
+                    <ol>
+                      <li>Enter watch codes above for each active tablet/board</li>
+                      <li>Start matches on DartConnect scoring tablets</li>
+                      <li>Run the scraper with your tournament ID:</li>
+                    </ol>
+                    <div className="code-example">
+                      <code>node enhanced-scraper.js {tournament.id}</code>
+                    </div>
+                    <ol start={4}>
+                      <li><strong>Player names are automatically extracted</strong> from each watch code</li>
+                      <li><strong>System finds matching scheduled matches</strong> using intelligent name matching</li>
+                      <li>When matches complete, results appear in Match Results Manager</li>
+                    </ol>
+                  </div>
+                </div>
+                
+                <div className="matching-details">
+                  <h4>Player Name Matching:</h4>
+                  <ul>
+                    <li><strong>Exact Match (100% confidence):</strong> Player names match exactly</li>
+                    <li><strong>High Confidence (90%+):</strong> Close match using fuzzy matching (handles typos, spacing)</li>
+                    <li><strong>Partial Match (&lt;90%):</strong> Similar names but requires manual review</li>
+                  </ul>
+                  <p className="note">
+                    💡 <strong>Tip:</strong> Use consistent player names in both DartConnect and your tournament registration for best auto-detection accuracy
+                  </p>
+                </div>
+              </div>
+            </div>
 
             <div className="setting-divider"></div>
 
