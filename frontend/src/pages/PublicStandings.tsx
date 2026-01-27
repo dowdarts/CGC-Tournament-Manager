@@ -47,24 +47,25 @@ const PublicStandings: React.FC = () => {
 
   const loadTournaments = async () => {
     try {
-      // Get tournaments updated in the last hour with show_standings_on_display enabled
-      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-      
+      // Get all active tournaments with show_standings_on_display enabled
       const { data, error } = await supabase
         .from('tournaments')
         .select('*')
-        .gte('updated_at', oneHourAgo)
         .eq('show_standings_on_display', true)
+        .in('status', ['active', 'in_progress'])
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
 
+      console.log('📊 Found tournaments with standings display enabled:', data?.length || 0);
+      
       setTournaments(data || []);
       
       // Auto-select first tournament if none selected
       if (data && data.length > 0 && !selectedTournamentId) {
         setSelectedTournamentId(data[0].id);
         setSelectedTournament(data[0]);
+        console.log('✅ Auto-selected tournament:', data[0].name);
       }
     } catch (error) {
       console.error('Error loading tournaments:', error);
@@ -77,6 +78,8 @@ const PublicStandings: React.FC = () => {
     if (!selectedTournamentId) return;
 
     try {
+      console.log('📊 Loading standings for tournament:', selectedTournamentId);
+      
       // Load groups
       const { data: groupsData, error: groupsError } = await supabase
         .from('groups')
@@ -85,6 +88,7 @@ const PublicStandings: React.FC = () => {
         .order('name');
 
       if (groupsError) throw groupsError;
+      console.log('📦 Loaded groups:', groupsData?.length || 0);
 
       // Load all group stage matches
       const { data: matchesData, error: matchesError } = await supabase
@@ -94,6 +98,7 @@ const PublicStandings: React.FC = () => {
         .not('group_id', 'is', null);
 
       if (matchesError) throw matchesError;
+      console.log('🎯 Loaded group matches:', matchesData?.length || 0);
 
       // Load players
       const { data: playersData, error: playersError } = await supabase
@@ -102,6 +107,7 @@ const PublicStandings: React.FC = () => {
         .eq('tournament_id', selectedTournamentId);
 
       if (playersError) throw playersError;
+      console.log('👥 Loaded players:', playersData?.length || 0);
 
       // Calculate standings for each group
       const standings = calculateGroupStandings(
