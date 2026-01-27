@@ -45,11 +45,10 @@ jobs:
           VITE_SUPABASE_URL: https://pfujbgwgsxuhgvmeatjh.supabase.co
           VITE_SUPABASE_ANON_KEY: sb_publishable_noZX7_xCvPZSqbQGfDsFMg_wRsuvLyB
 
-      - name: Copy registration portal
+      - name: Copy registration portal and public pages
         run: |
           mkdir -p frontend/dist/registration
-          cp registration-portal/index.html frontend/dist/registration/
-          cp registration-portal/registration-portal-logo.png frontend/dist/registration/
+          cp -r registration-portal/www/* frontend/dist/registration/
           cp live.html frontend/dist/
 
       - name: Upload artifact
