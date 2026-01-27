@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+npm-debug.log
+yarn.lock
+.npm
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+dist-electron/
+dist-electron-new/
+dist-electron-updated/
+build/
+out/
+*.exe
+*.dmg
+*.AppImage
+*.deb
+*.rpm
+*.zip
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+
+# Application specific
+.cache/
+temp/
+tmp/
+*.bak

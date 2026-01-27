@@ -1,0 +1,26 @@
+{
+  "name": "tournament-registration-app",
+  "version": "1.0.0",
+  "description": "Standalone mobile app for tournament registration",
+  "main": "index.html",
+  "scripts": {
+    "build": "npm run copy-assets",
+    "copy-assets": "cp index.html www/ && cp registration-portal-logo.png www/",
+    "sync": "npx cap sync",
+    "sync:android": "npx cap sync android",
+    "sync:ios": "npx cap sync ios",
+    "open:android": "npx cap open android",
+    "open:ios": "npx cap open ios",
+    "build:android": "cd android && gradlew assembleDebug",
+    "build:android:release": "cd android && gradlew assembleRelease"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/ios": "^6.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0",
+    "typescript": "^5.9.3"
+  }
+}

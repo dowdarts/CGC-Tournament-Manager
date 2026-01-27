@@ -1,0 +1,293 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+  color: #f5f5f5;
+  overflow-x: hidden;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+/* Modern Glass Morphism */
+.glass-card {
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(26, 26, 26, 0.75);
+  border: 1px solid rgba(255, 102, 0, 0.18);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6),
+              0 0 0 1px rgba(255, 102, 0, 0.1) inset;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  border-color: rgba(255, 102, 0, 0.4);
+  box-shadow: 0 12px 40px 0 rgba(255, 102, 0, 0.2),
+              0 0 0 1px rgba(255, 102, 0, 0.2) inset;
+  transform: translateY(-2px);
+}
+
+/* Modern Buttons */
+.btn {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateY(0);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  border: none;
+  cursor: pointer;
+  text-transform: uppercase;
+  font-size: 13px;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 30px rgba(255, 102, 0, 0.4);
+}
+
+.btn:active {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 15px rgba(255, 102, 0, 0.3);
+}
+
+/* Modern Badge */
+.badge {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  box-shadow: 0 4px 15px rgba(255, 102, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.badge:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(255, 102, 0, 0.5);
+}
+
+/* Prize Row Animation */
+.prize-row {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 8px;
+}
+
+.prize-row:hover {
+  background: rgba(255, 102, 0, 0.08);
+  transform: translateX(8px);
+  box-shadow: -4px 0 0 0 #ff6600;
+}
+
+/* Custom Modern Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(10, 10, 10, 0.8);
+  border-radius: 10px;
+  margin: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #ff6600 0%, #ff8533 100%);
+  border-radius: 10px;
+  border: 2px solid rgba(10, 10, 10, 0.8);
+  transition: all 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #ff8533 0%, #ffaa66 100%);
+  border-color: rgba(255, 102, 0, 0.2);
+}
+
+::-webkit-scrollbar-corner {
+  background: rgba(10, 10, 10, 0.8);
+}
+
+/* Loading animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .7;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Knockout Bracket Styles */
+.bracket-container {
+  align-items: center;
+}
+
+.bracket-round {
+  display: flex;
+  flex-direction: column;
+}
+
+.bracket-match {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.bracket-match:hover {
+  transform: translateY(-2px);
+}
+
+/* Tournament bracket connection lines */
+.bracket-match::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  width: 32px;
+  height: 2px;
+  background: #4b5563;
+  transform: translateY(-50%);
+}
+
+.bracket-round:last-child .bracket-match::after {
+  display: none;
+}
+
+/* Brackets-viewer.js Custom Dark Theme Overrides */
+.brackets-viewer-container {
+  --match-border-color: #4b5563;
+  --match-bg-color: #374151;
+  --match-hover-bg-color: #4b5563;
+  --match-winner-bg-color: #10b981;
+  --match-loser-bg-color: #ef4444;
+  --connector-color: #6b7280;
+  --primary-text-color: #f3f4f6;
+  --secondary-text-color: #9ca3af;
+  --score-color: #fbbf24;
+}
+
+.brackets-viewer .match {
+  background-color: var(--match-bg-color);
+  border-color: var(--match-border-color);
+  color: var(--primary-text-color);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.brackets-viewer .match:hover {
+  background-color: var(--match-hover-bg-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.brackets-viewer .participant {
+  background-color: #1f2937;
+  border-color: var(--match-border-color);
+  color: var(--primary-text-color);
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin: 2px 0;
+}
+
+.brackets-viewer .participant.win {
+  background-color: #065f46;
+  border-color: #10b981;
+  font-weight: 600;
+}
+
+.brackets-viewer .participant.loss {
+  background-color: #4b5563;
+  opacity: 0.6;
+}
+
+.brackets-viewer .participant-name {
+  color: var(--primary-text-color);
+  font-weight: 500;
+}
+
+.brackets-viewer .participant-score {
+  color: var(--score-color);
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+
+.brackets-viewer .connector {
+  stroke: var(--connector-color);
+  stroke-width: 2px;
+}
+
+.brackets-viewer .round-title {
+  background-color: #1f2937;
+  color: #a78bfa;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 12px;
+  border-radius: 8px 8px 0 0;
+  border-bottom: 2px solid #7c3aed;
+}
+
+.brackets-viewer .match-status {
+  color: var(--secondary-text-color);
+  font-size: 0.75rem;
+}
+
+/* Responsive bracket scaling */
+@media (max-width: 1024px) {
+  .brackets-viewer-container {
+    font-size: 0.875rem;
+  }
+  
+  .brackets-viewer .match {
+    min-width: 220px;
+  }
+}
+
+@media (max-width: 768px) {
+  .brackets-viewer-container {
+    font-size: 0.75rem;
+  }
+  
+  .brackets-viewer .match {
+    min-width: 180px;
+  }
+}

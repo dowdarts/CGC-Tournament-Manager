@@ -1,0 +1,27 @@
+{
+  "name": "dartconnect-scraper",
+  "version": "1.0.0",
+  "description": "Real-time DartConnect live match scraper for custom livestream overlays",
+  "main": "scraper.js",
+  "scripts": {
+    "start": "node scraper.js",
+    "dev": "nodemon scraper.js"
+  },
+  "dependencies": {
+    "puppeteer": "^22.0.0",
+    "@supabase/supabase-js": "^2.39.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "keywords": [
+    "dartconnect",
+    "scraper",
+    "livestream",
+    "darts",
+    "obs"
+  ],
+  "author": "",
+  "license": "MIT"
+}

@@ -1,0 +1,29 @@
+# Node
+node_modules/
+
+# Vite
+/dist/
+
+# Electron build output
+dist-electron/
+dist-electron-new/
+win-unpacked/
+
+# Windows binaries
+*.exe
+*.blockmap
+*.dll
+*.pak
+*.bin
+*.asar
+*.yml
+*.log
+
+# Ignore build output in all subfolders
+**/dist/
+**/dist-electron/
+**/dist-electron-new/
+**/win-unpacked/
+
+# Allow public icon
+!public/tournament-manager.ico

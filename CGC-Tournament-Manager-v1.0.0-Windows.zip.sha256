@@ -1,0 +1,15 @@
+﻿CGC Tournament Manager v1.0.0 - Distribution Package
+==================================================
+
+File: CGC-Tournament-Manager-v1.0.0-Windows.zip
+Size: 96.99 MB  
+SHA256: E5A3A306B54E01A6A47677B71665E434487A0988B3C1C32CF42B9D80876DEB66
+
+Verification Instructions:
+To verify the ZIP file integrity after download, run:
+Get-FileHash -Path "CGC-Tournament-Manager-v1.0.0-Windows.zip" -Algorithm SHA256
+
+The hash should match the SHA256 value above.
+
+==================================================
+Generated: 2026-01-26 14:52:59

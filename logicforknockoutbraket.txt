@@ -1,0 +1,547 @@
+To implement the exact matchup logic found in the DartConnect "RR Seed Test" code, you need to follow the WDF (World Darts Federation) crossover rules.In a professional darts bracket, the primary goal is Separation: a Winner and Runner-up from the same group must be placed in opposite halves of the bracket so they cannot play each other again until the Finals.1. The Seeding Sequence (1 to 128)DartConnect uses a Mirror Seeding system. Before assigning group winners, the bracket slots are assigned a "Seed Value."The Logic: Match 1 is always Seed 1 vs. Seed 128. Match 2 is Seed 64 vs. Seed 65.To calculate who plays whom in any size bracket $N$, the formula is:$$Opponent = (N + 1) - Seed$$2. Group Crossover Logic (Who plays Who)When you move from Round Robin to Knockout, you replace those "Seed Values" with your group finishers. Below is the exact matchup logic for the scenarios you listed:4 Groups (A, B, C, D) | 2 Qualifiers each (8-man Bracket)Bracket LineQualifier PositionLine 1Winner Group ALine 22nd Place Group DLine 3Winner Group BLine 42nd Place Group CLine 5Winner Group CLine 62nd Place Group BLine 7Winner Group DLine 82nd Place Group A2 Groups (A, B) | 4 Qualifiers each (8-man Bracket)Bracket LineMatchupMatch 1Winner Group A vs. 4th Place Group BMatch 22nd Place Group B vs. 3rd Place Group AMatch 32nd Place Group A vs. 3rd Place Group BMatch 4Winner Group B vs. 4th Place Group A3. Implementation Table for 128 PlayersFor a 16 Group / 4 Qualifiers scenario (64-man bracket), the "Offset" is 8 groups. You pair Group $i$ with Group $i + 8$.Bracket SectionMatchup LogicTop HalfWinner Group 1 vs. 4th Place Group 14Winner Group 2 vs. 4th Place Group 11Bottom HalfWinner Group 16 vs. 4th Place Group 82nd Place Group 1 vs. 3rd Place Group 154. How to use this in your TypeScript ProgramIn your program, you should create a mapping function that takes the numGroups and numQualifiers as inputs.TypeScript// Example: Mapping for a 4-group, 2-advance setup
+const crossoverMap = [
+  { pos: 1, source: "GroupA_Rank1" },
+  { pos: 2, source: "GroupD_Rank2" }, // Crossover!
+  { pos: 3, source: "GroupB_Rank1" },
+  { pos: 4, source: "GroupC_Rank2" },
+  // ... and so on
+];
+By using this "Mirror" logic (pairing Group 1 with the last group, Group 2 with the second to last), you ensure that the highest-ranked players are as far apart as possible.
+Bracket Line,Qualifier Position
+Line 1,Winner Group A
+Line 2,2nd Place Group D
+Line 3,Winner Group B
+Line 4,2nd Place Group C
+Line 5,Winner Group C
+Line 6,2nd Place Group B
+Line 7,Winner Group D
+Line 8,2nd Place Group A
+
+
+Bracket Line,Matchup
+Match 1,Winner Group A vs. 4th Place Group B
+Match 2,2nd Place Group B vs. 3rd Place Group A
+Match 3,2nd Place Group A vs. 3rd Place Group B
+Match 4,Winner Group B vs. 4th Place Group A
+
+Bracket Section,Matchup Logic
+Top Half,Winner Group 1 vs. 4th Place Group 14
+,Winner Group 2 vs. 4th Place Group 11
+Bottom Half,Winner Group 16 vs. 4th Place Group 8
+,2nd Place Group 1 vs. 3rd Place Group 15
+
+// Example: Mapping for a 4-group, 2-advance setup
+const crossoverMap = [
+  { pos: 1, source: "GroupA_Rank1" },
+  { pos: 2, source: "GroupD_Rank2" }, // Crossover!
+  { pos: 3, source: "GroupB_Rank1" },
+  { pos: 4, source: "GroupC_Rank2" },
+  // ... and so on
+];
+
+When you have more groups, the logic shifts from simple "Top vs Bottom" to a Sectional Mirror Crossover.The goal remains the same: Separation. You want the top performers from Group A to be as far as possible from the top performers of Group B, and you want to ensure no two players from the same group meet again until the latest possible round.1. The "Offset" Logic for Multiple GroupsIn a bracket with 8 or 16 groups, the system uses an "Offset" to determine who plays whom. The offset is usually half the number of groups.For 8 Groups: Offset is 4 (Group 1 pairs with Group 5).For 16 Groups: Offset is 8 (Group 1 pairs with Group 9).2. The Matchup Matrix (8 Groups, 2 Advance)If you have 8 groups and only the Top 2 advance, you have a 16-man bracket. Here is exactly how they are paired to ensure the #1 seeds are spread out:Bracket PositionTop Half MatchupsBracket PositionBottom Half MatchupsMatch 1Winner Group 1 vs 2nd Group 5Match 5Winner Group 2 vs 2nd Group 6Match 2Winner Group 8 vs 2nd Group 4Match 6Winner Group 7 vs 2nd Group 3Match 3Winner Group 5 vs 2nd Group 1Match 7Winner Group 6 vs 2nd Group 2Match 4Winner Group 4 vs 2nd Group 8Match 8Winner Group 3 vs 2nd Group 7
+
+3. The Matchup Matrix (8 Groups, 4 Advance)
+This creates a 32-man bracket. The crossover now has to account for 4 players per group. The logic "mirrors" the ranks: 1st plays 4th and 2nd plays 3rd.
+
+Top Left Quadrant Example:
+
+Winner Group 1 vs 4th Place Group 5
+
+2nd Place Group 8 vs 3rd Place Group 4
+
+Winner Group 3 vs 4th Place Group 7
+
+2nd Place Group 6 vs 3rd Place Group 2
+
+4. Implementation in your TypeScript Script
+To make this work for "any" combination in your VS Code project, use this Dynamic Mapping Formula:
+
+TypeScript
+
+/**
+ * Calculates the opponent's Group Index based on the Offset.
+ * @param currentGroup The index of the group (0 to N-1)
+ * @param totalGroups Total groups in the tournament
+ */
+function getCrossoverGroup(currentGroup: number, totalGroups: number): number {
+    const offset = totalGroups / 2;
+    return (currentGroup + offset) % totalGroups;
+}
+
+/**
+ * Calculates the opponent's Rank (1st plays 4th, 2nd plays 3rd)
+ */
+function getOpponentRank(currentRank: number, totalQualifiers: number): number {
+    return (totalQualifiers + 1) - currentRank;
+}
+
+Why this logic is in those DartConnect Files:
+The files you found (bracketBuilderTest.js) use these formulas to draw the lines.
+
+numGroups determines the width of the spread.
+
+numQualifiers determines the "depth" of the first round.
+
+Crossover prevents a "Group A Winner" from playing a "Group A Runner-up" in the second round.
+
+In a professional darts tournament program, the logic for moving from Round Robin (RR) to Knockout (KO) is designed to separate top players from the same group as long as possible.Below is a complete TypeScript/JavaScript solution for your VS Code project. It includes the seeding math for any bracket size ($4, 8, 16, 32, 64, 128$) and a "Crossover" generator to pair players correctly.1. The Seeding Sequence GeneratorThis function calculates the exact "Top-to-Bottom" position of seeds in a bracket.TypeScript/**
+ * Generates the standard tournament seed order for any power of 2.
+ * E.g., for 8: [1, 8, 5, 4, 3, 6, 7, 2]
+ */
+function getSeedOrder(size: number): number[] {
+  let seeds = [1, 2];
+  while (seeds.length < size) {
+    let nextLevel: number[] = [];
+    for (let seed of seeds) {
+      nextLevel.push(seed);
+      nextLevel.push(seeds.length * 2 + 1 - seed);
+    }
+    seeds = nextLevel;
+  }
+  return seeds;
+}
+2. The Universal Crossover LogicThis function maps your Round Robin groups to the bracket seeds. It uses the "Shift" logic found in DartConnect: Winner of Group 1 is assigned Seed 1, while the Winner of Group 2 is assigned Seed $N$ (the bottom seed).TypeScriptinterface GroupPlayer {
+  groupId: number; // 0, 1, 2...
+  rank: number;    // 1, 2, 3... (1st place, 2nd place)
+}
+
+/**
+ * Maps Round Robin finishers to Bracket Seeds.
+ * @param numGroups Number of groups (e.g., 8)
+ * @param numQualifiers Players advancing per group (e.g., 4)
+ */
+function mapGroupsToSeeds(numGroups: number, numQualifiers: number): Record<number, GroupPlayer> {
+  const totalPlayers = numGroups * numQualifiers;
+  const seedMap: Record<number, GroupPlayer> = {};
+
+  // Standard Darts Mapping Sequence (WDF/DartConnect Style)
+  // This maps the 1st place finishers first, then 2nd, then 3rd...
+  for (let rank = 1; rank <= numQualifiers; rank++) {
+    for (let g = 0; g < numGroups; g++) {
+      // Logic: Calculate a 'Virtual Seed' based on Rank and Group
+      // This spreads different ranks across different quarters of the bracket
+      const seedValue = ((rank - 1) * numGroups) + (g + 1);
+      seedMap[seedValue] = { groupId: g, rank: rank };
+    }
+  }
+  return seedMap;
+}
+3. The Match Generator (Who Plays Who)This combines the two functions to tell you exactly who is playing in every match.TypeScriptfunction generateMatchups(numGroups: number, numQualifiers: number) {
+  const size = numGroups * numQualifiers;
+  const seedOrder = getSeedOrder(size);
+  const seedToPlayer = mapGroupsToSeeds(numGroups, numQualifiers);
+
+  const matchups = [];
+  for (let i = 0; i < seedOrder.length; i += 2) {
+    const p1Seed = seedOrder[i];
+    const p2Seed = seedOrder[i + 1];
+
+    matchups.push({
+      matchIndex: i / 2,
+      player1: seedToPlayer[p1Seed], // e.g., {groupId: 0, rank: 1} (Winner A)
+      player2: seedToPlayer[p2Seed]  // e.g., {groupId: 4, rank: 4} (4th Place E)
+    });
+  }
+  return matchups;
+}
+
+// EXAMPLE: 8 Groups, 4 Advance (32-man bracket)
+const tournamentMatches = generateMatchups(8, 4);
+console.log(tournamentMatches[0]); 
+// Output: { matchIndex: 0, player1: {groupId: 0, rank: 1}, player2: {groupId: 7, rank: 4} }
+// Translated: Winner of Group A vs 4th Place Group H
+To implement this in your Supabase backend, you can use a PostgreSQL function. This is more efficient than doing the math in React because it allows you to generate all matches for a 128-player bracket in a single database call.1. Create the Supabase SQL FunctionRun this script in your Supabase SQL Editor. This function creates a table-returning process that calculates the "Mirror Seeding" and handles the group crossovers.SQLCREATE OR REPLACE FUNCTION generate_bracket_matches(
+  t_id UUID, 
+  num_groups INT, 
+  advancing_per_group INT
+)
+RETURNS TABLE (
+  match_index INT,
+  p1_group INT,
+  p1_rank INT,
+  p2_group INT,
+  p2_rank INT
+) 
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    total_slots INT := num_groups * advancing_per_group;
+    seeds INT[] := ARRAY[1, 2];
+    next_level INT[];
+    s INT;
+    group_offset INT := num_groups / 2;
+BEGIN
+    -- 1. Generate the Seed Order (Recursive Power of 2)
+    WHILE array_length(seeds, 1) < total_slots LOOP
+        next_level := ARRAY[]::INT[];
+        FOREACH s IN ARRAY seeds LOOP
+            next_level := array_append(next_level, s);
+            next_level := array_append(next_level, (array_length(seeds, 1) * 2 + 1) - s);
+        END LOOP;
+        seeds := next_level;
+    END LOOP;
+
+    -- 2. Map Seeds to Matches and calculate Crossovers
+    FOR i IN 1..total_slots BY 2 LOOP
+        RETURN QUERY SELECT 
+            (i-1)/2, -- match_index
+            -- Player 1 logic
+            ((seeds[i] - 1) % num_groups), -- p1_group (0-indexed)
+            ((seeds[i] - 1) / num_groups) + 1, -- p1_rank (1st, 2nd, etc)
+            -- Player 2 logic (The Crossover)
+            ((seeds[i+1] - 1) % num_groups), -- p2_group
+            ((seeds[i+1] - 1) / num_groups) + 1; -- p2_rank
+    END LOOP;
+END;
+$$;
+2. How the Crossover Math WorksThis SQL function uses a Mathematical Mirror. In a 128-player field:The Winner of Group A (Rank 1, Group 0) is assigned Seed 1.The Winner of Group B (Rank 1, Group 1) is assigned Seed 128 (the very bottom of the bracket).The 4th place of Group A is assigned a seed in the middle, ensuring they cannot play their own group winner until much later.3. Usage in your TypeScript FrontendSince you are using Vite and the Supabase JS Client, you can call this function directly when you're ready to "Start Knockout."TypeScriptconst startKnockout = async (tournamentId, groups, advanceCount) => {
+  // Call the SQL function we just created
+  const { data, error } = await supabase.rpc('generate_bracket_matches', {
+    t_id: tournamentId,
+    num_groups: groups,
+    advancing_per_group: advanceCount
+  });
+
+  if (error) console.error(error);
+
+  // Now you have the matchups! Example output:
+  // match_index: 0, p1_group: 0, p1_rank: 1, p2_group: 7, p2_rank: 4
+  // (Winner Group A vs 4th Group H)
+  
+  // MAP these to your actual player IDs from your standings table
+  data.forEach(async (match) => {
+     // Insert into your 'matches' table
+     const p1 = await getPlayerByRank(match.p1_group, match.p1_rank);
+     const p2 = await getPlayerByRank(match.p2_group, match.p2_rank);
+     
+     await supabase.table('matches').insert({
+       tournament_id: tournamentId,
+       player1_id: p1.id,
+       player2_id: p2.id,
+       round: 1
+     });
+  });
+};
+4. Key Benefits for your Program:Separation Rule: It automatically ensures the 1st and 2nd place from the same group are in opposite halves of the bracket.Scalable: It works for any "Power of 2" bracket ($4, 8, 16, 32, 64, 128$).DartConnect Standard: This mirrors the exact matchup behavior seen in the bracketBuilderTest.js file you found.
+Here is the getPlayerByRank helper function and the complete workflow to bridge your group standings into the bracket matches.
+
+1. The Supabase Query Logic
+In your standings table (where you track wins/legs for each group), you need to find the specific player occupying a certain rank. This logic uses the order() and range() methods to pick the exact player (e.g., "The person in 3rd place in Group B").
+
+TypeScript
+
+/**
+ * Fetches a specific player from a group based on their rank.
+ * @param groupId The ID or Index of the group
+ * @param rank The finishing position (1 for Winner, 2 for Runner-up, etc.)
+ */
+async function getPlayerByRank(tournamentId: string, groupIndex: number, rank: number) {
+  const { data, error } = await supabase
+    .from('group_standings')
+    .select('player_id, player_name')
+    .eq('tournament_id', tournamentId)
+    .eq('group_index', groupIndex)
+    // Order by Wins first, then Leg Difference (Standard Darts Tie-break)
+    .order('matches_won', { ascending: false })
+    .order('leg_difference', { ascending: false })
+    // Range is 0-indexed, so 1st place is range(0,0), 2nd is (1,1)
+    .range(rank - 1, rank - 1)
+    .single();
+
+  if (error) {
+    console.error(`Error fetching Rank ${rank} for Group ${groupIndex}:`, error);
+    return null;
+  }
+  return data;
+}
+2. The Complete "Promote to Knockout" Script
+This script combines the SQL Bracket Generator we made earlier with the Player Fetcher. It automates the entire transition from Round Robin to the Bracket.
+
+TypeScript
+
+async function promoteToKnockout(tournamentId: string, numGroups: number, advanceCount: number) {
+  console.log("Generating Bracket Matchups...");
+
+  // 1. Get the Crossover Map from the SQL Function
+  const { data: matchups, error: rpcError } = await supabase.rpc('generate_bracket_matches', {
+    num_groups: numGroups,
+    advancing_per_group: advanceCount
+  });
+
+  if (rpcError) return;
+
+  // 2. Loop through each generated match and assign real players
+  for (const match of matchups) {
+    const player1 = await getPlayerByRank(tournamentId, match.p1_group, match.p1_rank);
+    const player2 = await getPlayerByRank(tournamentId, match.p2_group, match.p2_rank);
+
+    if (player1 && player2) {
+      // 3. Create the Match in your 'matches' table
+      const { error: insertError } = await supabase.from('matches').insert({
+        tournament_id: tournamentId,
+        p1_id: player1.player_id,
+        p2_id: player2.player_id,
+        round: 1,
+        bracket_position: match.match_index,
+        p1_label: `Group ${String.fromCharCode(65 + match.p1_group)}${match.p1_rank}`, // e.g. A1
+        p2_label: `Group ${String.fromCharCode(65 + match.p2_group)}${match.p2_rank}`, // e.g. H4
+        status: 'pending'
+      });
+      
+      if (insertError) console.error("Insert Error:", insertError);
+    }
+  }
+  
+  console.log("Bracket Generated Successfully!");
+}
+
+Why this setup is "Pro Grade"
+Dynamic Naming: It automatically converts group indexes to letters (Group 0 becomes A, Group 7 becomes H), so your bracket displays "A1 vs H4" until the players are confirmed.
+
+Tie-Breaking: The getPlayerByRank function uses both matches_won and leg_difference. This ensures that if two players have the same record, the one with the better leg count gets the higher seed.
+
+Automatic Crossovers: Because it uses the generate_bracket_matches RPC, it automatically handles the "Mirroring" for any bracket size (up to 128).
+
+4. Database Schema Requirement
+To make this work, ensure your group_standings table in Supabase has these columns:
+
+tournament_id (UUID)
+
+group_index (INT)
+
+player_id (UUID)
+
+matches_won (INT)
+
+leg_difference (INT)
+
+To automate your tournament standings with professional tie-breaking rules (like those used in DartConnect or the WDF), you should use a PostgreSQL View.A View is like a "saved query" that acts as a real table. Whenever a match score is updated in your matches table, this View automatically recalculates the standings.1. The Standing View SQLRun this in your Supabase SQL Editor. This logic calculates Wins, Losses, Legs For/Against, and Leg Difference ($LegsFor - LegsAgainst$).SQLCREATE OR REPLACE VIEW group_standings AS
+WITH player_stats AS (
+  -- Calculate stats for Player 1
+  SELECT 
+    tournament_id,
+    group_index,
+    p1_id AS player_id,
+    COUNT(*) FILTER (WHERE p1_legs > p2_legs) AS matches_won,
+    COUNT(*) FILTER (WHERE p1_legs < p2_legs) AS matches_lost,
+    SUM(p1_legs) AS legs_for,
+    SUM(p2_legs) AS legs_against
+  FROM matches
+  WHERE status = 'completed' AND group_index IS NOT NULL
+  GROUP BY tournament_id, group_index, p1_id
+
+  UNION ALL
+
+  -- Calculate stats for Player 2
+  SELECT 
+    tournament_id,
+    group_index,
+    p2_id AS player_id,
+    COUNT(*) FILTER (WHERE p2_legs > p1_legs) AS matches_won,
+    COUNT(*) FILTER (WHERE p2_legs < p1_legs) AS matches_lost,
+    SUM(p2_legs) AS legs_for,
+    SUM(p1_legs) AS legs_against
+  FROM matches
+  WHERE status = 'completed' AND group_index IS NOT NULL
+  GROUP BY tournament_id, group_index, p2_id
+)
+SELECT 
+  tournament_id,
+  group_index,
+  player_id,
+  SUM(matches_won) AS total_wins,
+  SUM(legs_for) - SUM(legs_against) AS leg_diff,
+  SUM(legs_for) AS total_legs_for,
+  -- Darts Tie-breaker: Rank by Wins, then Leg Difference, then Total Legs For
+  RANK() OVER (
+    PARTITION BY tournament_id, group_index 
+    ORDER BY SUM(matches_won) DESC, (SUM(legs_for) - SUM(legs_against)) DESC, SUM(legs_for) DESC
+  ) AS rank
+FROM player_stats
+GROUP BY tournament_id, group_index, player_id;
+2. Why this is the "Gold Standard" for DartsDarts tournaments use a specific hierarchy to break ties. If two players have the same number of wins, this View checks:Leg Difference: (e.g., $+10$ is better than $+8$).Legs Won: (If leg diff is tied, the player who won more total legs is more aggressive and gets the higher seed).Automatic Updates: You never have to "calculate" standings in React. Just query the group_standings view.3. Fetching the Finalists for your BracketNow, your getPlayerByRank function becomes extremely simple. It just reads from this View:TypeScriptasync function getQualifiedPlayer(t_id: string, g_idx: number, rank_pos: number) {
+  const { data, error } = await supabase
+    .from('group_standings')
+    .select('player_id')
+    .eq('tournament_id', t_id)
+    .eq('group_index', g_idx)
+    .eq('rank', rank_pos)
+    .single();
+
+  return data?.player_id;
+}
+4. Handling 3-Way Ties (Head-to-Head)The logic above covers 95% of scenarios. If you want to be 100% professional (like the World Championships), the next tie-breaker after Leg Difference is Head-to-Head (who won the match between the two tied players).To do this, we would add a head_to_head sub-query to the View.
+
+To make your program flexible for different tournament styles (like Point-based leagues vs. Standard WDF match-wins), we need to update the Supabase logic to support "Dynamic Sorting."
+
+Instead of a fixed View, we will create a PostgreSQL Function that accepts a sort_method parameter. This allows your React frontend to switch the ranking logic on the fly.
+
+1. Update the Database Schema
+First, ensure your tournaments table has a column for the scoring type, or just pass it as a variable.
+
+Matches Won: Standard Darts (wins > h2h > leg_diff)
+
+Points: Custom (e.g., 3 pts for win, 1 pt for draw)
+
+Legs Only: Pure aggregate scoring
+
+2. The Dynamic Ranking Function (SQL)
+Run this in your Supabase SQL Editor. It uses a CASE statement to change the ORDER BY priority based on what the user selects.
+
+SQL
+
+CREATE OR REPLACE FUNCTION get_dynamic_standings(
+  t_id UUID, 
+  sort_method TEXT DEFAULT 'matches' -- 'matches', 'points', or 'legs'
+)
+RETURNS TABLE (
+  player_id UUID,
+  group_index INT,
+  total_wins INT,
+  total_points INT,
+  leg_diff INT,
+  legs_won INT,
+  final_rank INT
+) 
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  WITH stats AS (
+    SELECT 
+      m.tournament_id, m.group_index, p.p_id as p_id,
+      -- Standard Wins
+      COUNT(*) FILTER (WHERE (m.p1_id = p.p_id AND m.p1_legs > m.p2_legs) OR (m.p2_id = p.p_id AND m.p2_legs > m.p1_legs)) as wins,
+      -- Custom Points (Example: 3 for win, 1 for draw)
+      SUM(CASE 
+        WHEN (m.p1_id = p.p_id AND m.p1_legs > m.p2_legs) OR (m.p2_id = p.p_id AND m.p2_legs > m.p1_legs) THEN 3
+        WHEN m.p1_legs = m.p2_legs THEN 1
+        ELSE 0 
+      END) as points,
+      -- Leg Math
+      SUM(CASE WHEN m.p1_id = p.p_id THEN m.p1_legs ELSE m.p2_legs END) as l_for,
+      SUM(CASE WHEN m.p1_id = p.p_id THEN m.p2_legs ELSE m.p1_legs END) as l_ag
+    FROM matches m
+    CROSS JOIN LATERAL (SELECT m.p1_id UNION SELECT m.p2_id) AS p(p_id)
+    WHERE m.tournament_id = t_id AND m.status = 'completed'
+    GROUP BY m.tournament_id, m.group_index, p.p_id
+  )
+  SELECT 
+    s.p_id, s.group_index, s.wins, s.points, (s.l_for - s.l_ag), s.l_for,
+    DENSE_RANK() OVER (
+      PARTITION BY s.group_index 
+      ORDER BY 
+        CASE WHEN sort_method = 'matches' THEN s.wins END DESC,
+        CASE WHEN sort_method = 'points' THEN s.points END DESC,
+        CASE WHEN sort_method = 'legs' THEN s.l_for END DESC,
+        (s.l_for - s.l_ag) DESC, -- Leg Diff always acts as second tie-breaker
+        s.l_for DESC
+    ) as final_rank
+  FROM stats s;
+END;
+$$;
+3. React Frontend Toggle
+In your VS Code project, you can now create a dropdown that lets the Tournament Director choose the ranking style.
+
+TypeScript
+
+// Inside your Standings Component
+const [sortStyle, setSortStyle] = useState<'matches' | 'points' | 'legs'>('matches');
+
+const fetchStandings = async () => {
+  const { data, error } = await supabase.rpc('get_dynamic_standings', {
+    t_id: tournamentId,
+    sort_method: sortStyle // This switches the SQL logic instantly!
+  });
+  setStandings(data);
+};
+
+return (
+  <select onChange={(e) => setSortStyle(e.target.value as any)}>
+    <option value="matches">Standard (Match Wins)</option>
+    <option value="points">Leagues (Points System)</option>
+    <option value="legs">Aggressive (Total Legs Won)</option>
+  </select>
+);
+4. Custom Points Customization
+If you want to allow the user to define exactly how many points a win is worth (e.g., 2 points instead of 3):
+
+Add a win_value and draw_value parameter to the SQL function.
+
+Pass those values from your React form into the supabase.rpc() call.
+Would you like me to add the logic that allows for custom "Point Values" (e.g., let the user type in '5 points for a win') into this SQL function? yes
+To make your program fully professional, we will update the SQL function to accept Custom Point Values. This allows the tournament director to set rules like "5 points for a win, 2 for a draw" directly from your React UI.1. The Pro-Grade Dynamic Scoring FunctionRun this in your Supabase SQL Editor. This version handles the math for any point configuration you pass to it.SQLCREATE OR REPLACE FUNCTION get_dynamic_standings(
+  t_id UUID, 
+  sort_method TEXT DEFAULT 'matches', -- 'matches', 'points', or 'legs'
+  val_win INT DEFAULT 3,               -- Points for a win
+  val_draw INT DEFAULT 1,              -- Points for a draw
+  val_loss INT DEFAULT 0               -- Points for a loss
+)
+RETURNS TABLE (
+  player_id UUID,
+  group_index INT,
+  total_wins INT,
+  total_points INT,
+  leg_diff INT,
+  legs_won INT,
+  final_rank INT
+) 
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  WITH stats AS (
+    SELECT 
+      m.tournament_id, m.group_index, p.p_id as p_id,
+      -- Count Match Outcomes
+      COUNT(*) FILTER (WHERE (m.p1_id = p.p_id AND m.p1_legs > m.p2_legs) OR (m.p2_id = p.p_id AND m.p2_legs > m.p1_legs)) as wins,
+      COUNT(*) FILTER (WHERE m.p1_legs = m.p2_legs) as draws,
+      -- Calculate Dynamic Points
+      SUM(CASE 
+        WHEN (m.p1_id = p.p_id AND m.p1_legs > m.p2_legs) OR (m.p2_id = p.p_id AND m.p2_legs > m.p1_legs) THEN val_win
+        WHEN m.p1_legs = m.p2_legs THEN val_draw
+        ELSE val_loss
+      END) as points,
+      -- Leg Math
+      SUM(CASE WHEN m.p1_id = p.p_id THEN m.p1_legs ELSE m.p2_legs END) as l_for,
+      SUM(CASE WHEN m.p1_id = p.p_id THEN m.p2_legs ELSE m.p1_legs END) as l_ag
+    FROM matches m
+    CROSS JOIN LATERAL (SELECT m.p1_id UNION SELECT m.p2_id) AS p(p_id)
+    WHERE m.tournament_id = t_id AND m.status = 'completed'
+    GROUP BY m.tournament_id, m.group_index, p.p_id
+  )
+  SELECT 
+    s.p_id, s.group_index, s.wins, s.points, (s.l_for - s.l_ag), s.l_for,
+    DENSE_RANK() OVER (
+      PARTITION BY s.group_index 
+      ORDER BY 
+        CASE WHEN sort_method = 'matches' THEN s.wins END DESC,
+        CASE WHEN sort_method = 'points' THEN s.points END DESC,
+        CASE WHEN sort_method = 'legs' THEN s.l_for END DESC,
+        (s.l_for - s.l_ag) DESC, 
+        s.l_for DESC
+    ) as final_rank
+  FROM stats s;
+END;
+$$;
+2. React UI ImplementationIn your TypeScript project, you can now create a "Settings" panel for the tournament.TypeScript// Your State for Tournament Rules
+const [scoringRules, setScoringRules] = useState({
+  method: 'points',
+  winPoints: 5,
+  drawPoints: 2,
+  lossPoints: 0
+});
+
+const loadStandings = async () => {
+  const { data, error } = await supabase.rpc('get_dynamic_standings', {
+    t_id: tournamentId,
+    sort_method: scoringRules.method,
+    val_win: scoringRules.winPoints,
+    val_draw: scoringRules.drawPoints,
+    val_loss: scoringRules.lossPoints
+  });
+  
+  if (data) setStandings(data);
+};
+3. Visualizing the Standings TableWhen you display the data in your React component, you can now show exactly why someone is ranked #1.RankPlayerPtsWins+/-1Player A153+122Player B102+44. Integration with Bracket GenerationThe beauty of this system is that your Bracket Generation logic (the one that moves players to the KO stage) doesn't need to change. It simply asks for the players with final_rank = 1, final_rank = 2, etc.

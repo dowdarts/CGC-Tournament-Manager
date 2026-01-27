@@ -1,0 +1,13 @@
+{
+  "name": "tournament-email-server",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Email server for tournament registration",
+  "main": "email-server.js",
+  "scripts": {
+    "start": "node email-server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
