@@ -4,7 +4,7 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
-  base: process.env.ELECTRON ? './' : (process.env.VITE_BASE_PATH || '/CGC-Tournament-Manager/'),
+  base: process.env.ELECTRON ? './' : '/',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src')
