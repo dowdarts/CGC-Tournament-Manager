@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Tournament, Player, Match, Group, Board } from '@/types';
+import { Tournament, Player, Match, Group, Board, PendingMatchResult, MatchWatchCode } from '@/types';
 
 // Tournament API
 export const TournamentService = {
@@ -317,6 +317,242 @@ export const BoardService = {
       .from('boards')
       .update(updates)
       .eq('id', id)
+      .select();
+    if (error) throw error;
+    return data?.[0];
+  }
+};
+
+// DartConnect Integration API
+export const DartConnectService = {
+  // ===== Pending Match Results =====
+  
+  async getPendingResults(tournamentId: string, status?: string) {
+    let query = supabase
+      .from('pending_match_results')
+      .select('*')
+      .eq('tournament_id', tournamentId)
+      .order('created_at', { ascending: false });
+    
+    if (status) {
+      query = query.eq('status', status);
+    }
+    
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getPendingResult(id: string) {
+    const { data, error } = await supabase
+      .from('pending_match_results')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async approvePendingResult(id: string, userId?: string) {
+    // Get the pending result
+    const { data: pendingResult, error: fetchError } = await supabase
+      .from('pending_match_results')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (fetchError) throw fetchError;
+    if (!pendingResult) throw new Error('Pending result not found');
+    
+    // Update the linked match if it exists
+    if (pendingResult.match_id) {
+      const winnerId = await this.determineWinnerId(
+        pendingResult.match_id,
+        pendingResult.player1_legs,
+        pendingResult.player2_legs
+      );
+      
+      const { error: matchError } = await supabase
+        .from('matches')
+        .update({
+          player1_legs: pendingResult.player1_legs,
+          player2_legs: pendingResult.player2_legs,
+          winner_id: winnerId,
+          status: 'completed',
+          completed_at: pendingResult.match_completed_at
+        })
+        .eq('id', pendingResult.match_id);
+      
+      if (matchError) throw matchError;
+
+      // Log the change
+      await this.logScoreChange({
+        match_id: pendingResult.match_id,
+        tournament_id: pendingResult.tournament_id,
+        change_type: 'dartconnect_approved',
+        new_player1_legs: pendingResult.player1_legs,
+        new_player2_legs: pendingResult.player2_legs,
+        new_winner_id: winnerId,
+        new_status: 'completed',
+        source: 'dartconnect',
+        pending_result_id: id,
+        changed_by: userId || 'user',
+        change_reason: 'Approved from DartConnect scraper'
+      });
+    }
+    
+    // Update pending result status
+    const { data, error } = await supabase
+      .from('pending_match_results')
+      .update({
+        status: 'approved',
+        processed_at: new Date().toISOString(),
+        processed_by: userId || 'user'
+      })
+      .eq('id', id)
+      .select();
+    
+    if (error) throw error;
+    return data?.[0];
+  },
+
+  async rejectPendingResult(id: string, userId?: string, reason?: string) {
+    const { data, error } = await supabase
+      .from('pending_match_results')
+      .update({
+        status: 'rejected',
+        processed_at: new Date().toISOString(),
+        processed_by: userId || 'user',
+        matching_notes: reason || 'Rejected by user'
+      })
+      .eq('id', id)
+      .select();
+    
+    if (error) throw error;
+    return data?.[0];
+  },
+
+  async deletePendingResult(id: string) {
+    const { error } = await supabase
+      .from('pending_match_results')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+  },
+
+  // ===== Watch Codes =====
+  
+  async getMatchWatchCode(matchId: string) {
+    const { data, error } = await supabase
+      .from('match_watch_codes')
+      .select('*')
+      .eq('match_id', matchId)
+      .single();
+    if (error && error.code !== 'PGRST116') throw error; // PGRST116 = not found
+    return data;
+  },
+
+  async setMatchWatchCode(matchId: string, tournamentId: string, watchCode: string, autoAccept: boolean = false) {
+    const { data, error } = await supabase
+      .from('match_watch_codes')
+      .upsert({
+        match_id: matchId,
+        tournament_id: tournamentId,
+        watch_code: watchCode,
+        auto_accept_enabled: autoAccept,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'match_id,watch_code'
+      })
+      .select();
+    
+    if (error) throw error;
+    return data?.[0];
+  },
+
+  async deleteMatchWatchCode(id: string) {
+    const { error } = await supabase
+      .from('match_watch_codes')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+  },
+
+  async getWatchCodesByTournament(tournamentId: string) {
+    const { data, error } = await supabase
+      .from('match_watch_codes')
+      .select('*')
+      .eq('tournament_id', tournamentId);
+    if (error) throw error;
+    return data || [];
+  },
+
+  // ===== Score History =====
+  
+  async getMatchHistory(matchId: string) {
+    const { data, error } = await supabase
+      .from('match_score_history')
+      .select('*')
+      .eq('match_id', matchId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async logScoreChange(changeData: {
+    match_id: string;
+    tournament_id: string;
+    change_type: 'manual_entry' | 'dartconnect_auto' | 'dartconnect_approved' | 'dartconnect_rejected' | 'score_update';
+    old_player1_legs?: number;
+    old_player2_legs?: number;
+    old_winner_id?: string;
+    old_status?: string;
+    new_player1_legs?: number;
+    new_player2_legs?: number;
+    new_winner_id?: string;
+    new_status?: string;
+    source?: string;
+    pending_result_id?: string;
+    changed_by?: string;
+    change_reason?: string;
+  }) {
+    const { data, error } = await supabase
+      .from('match_score_history')
+      .insert(changeData)
+      .select();
+    if (error) throw error;
+    return data?.[0];
+  },
+
+  // ===== Helper Methods =====
+  
+  async determineWinnerId(matchId: string, player1Legs: number, player2Legs: number): Promise<string | null> {
+    const { data: match } = await supabase
+      .from('matches')
+      .select('player1_id, player2_id')
+      .eq('id', matchId)
+      .single();
+    
+    if (!match) return null;
+    
+    if (player1Legs > player2Legs) {
+      return match.player1_id;
+    } else if (player2Legs > player1Legs) {
+      return match.player2_id;
+    }
+    return null;
+  },
+
+  // Update tournament DartConnect settings
+  async updateDartConnectSettings(tournamentId: string, settings: {
+    dartconnect_integration_enabled?: boolean;
+    dartconnect_auto_accept_scores?: boolean;
+    dartconnect_require_manual_approval?: boolean;
+  }) {
+    const { data, error } = await supabase
+      .from('tournaments')
+      .update(settings)
+      .eq('id', tournamentId)
       .select();
     if (error) throw error;
     return data?.[0];

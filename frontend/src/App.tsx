@@ -17,6 +17,7 @@ import Paycal from './pages/Paycal';
 import StreamOverlay from '@/pages/StreamOverlay';
 import Standings from '@/pages/Standings';
 import Settings from './pages/Settings';
+import MatchResultsManager from './pages/MatchResultsManager';
 import PublicRegister from './pages/PublicRegister';
 import TournamentLobby from './pages/TournamentLobby';
 import TournamentDisplay from './pages/TournamentDisplay';
@@ -116,6 +117,7 @@ const AppContent: React.FC = () => {
                   <Route path="standings" element={<Standings />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="display-links" element={<DisplayLinks />} />
+                  <Route path="match-results" element={<MatchResultsManager />} />
                   <Route path="paycal" element={<Paycal />} />
                 </Routes>
               </TournamentLayout>

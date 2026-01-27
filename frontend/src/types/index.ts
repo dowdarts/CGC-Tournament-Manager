@@ -19,6 +19,11 @@ export interface Tournament {
   archived?: boolean; // Tournament is archived
   completed?: boolean; // Tournament is marked as completed
   
+  // DartConnect Integration
+  dartconnect_integration_enabled?: boolean; // Enable live scraping integration
+  dartconnect_auto_accept_scores?: boolean; // Auto-accept scores with high confidence
+  dartconnect_require_manual_approval?: boolean; // Require manual approval for all scores
+  
   // Workflow steps
   setup_completed?: boolean;
   participants_confirmed?: boolean;
@@ -161,4 +166,86 @@ export interface BoardCallNotification {
   player2Id: string;
   sentAt: string;
   emailsSent: { playerId: string; email: string; sent: boolean }[];
+}
+
+// DartConnect Integration Types
+export interface PendingMatchResult {
+  id: string;
+  tournament_id: string;
+  match_id?: string;
+  watch_code: string;
+  scraper_session_id?: string;
+  
+  // Player Information
+  player1_name: string;
+  player2_name: string;
+  
+  // Match Results
+  player1_legs: number;
+  player2_legs: number;
+  player1_sets: number;
+  player2_sets: number;
+  winner_name?: string;
+  
+  // Additional Data
+  match_format?: string;
+  player1_average?: number;
+  player2_average?: number;
+  player1_highest_checkout?: number;
+  player2_highest_checkout?: number;
+  player1_180s?: number;
+  player2_180s?: number;
+  total_legs_played?: number;
+  match_duration_minutes?: number;
+  
+  // Status
+  status: 'pending' | 'approved' | 'rejected' | 'auto-accepted';
+  
+  // Matching Info
+  confidence_score?: number;
+  match_found: boolean;
+  matching_notes?: string;
+  
+  // Raw Data
+  raw_scraper_data?: any;
+  
+  // Timestamps
+  match_started_at?: string;
+  match_completed_at: string;
+  created_at: string;
+  processed_at?: string;
+  processed_by?: string;
+}
+
+export interface MatchWatchCode {
+  id: string;
+  match_id: string;
+  tournament_id: string;
+  watch_code: string;
+  scraper_active: boolean;
+  scraper_started_at?: string;
+  scraper_stopped_at?: string;
+  auto_accept_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MatchScoreHistory {
+  id: string;
+  match_id: string;
+  tournament_id: string;
+  change_type: 'manual_entry' | 'dartconnect_auto' | 'dartconnect_approved' | 'dartconnect_rejected' | 'score_update';
+  old_player1_legs?: number;
+  old_player2_legs?: number;
+  old_winner_id?: string;
+  old_status?: string;
+  new_player1_legs?: number;
+  new_player2_legs?: number;
+  new_winner_id?: string;
+  new_status?: string;
+  source?: string;
+  pending_result_id?: string;
+  changed_by?: string;
+  change_reason?: string;
+  created_at: string;
 }
