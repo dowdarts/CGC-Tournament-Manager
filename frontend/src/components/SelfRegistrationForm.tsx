@@ -125,7 +125,7 @@ const SelfRegistrationForm: React.FC<SelfRegistrationFormProps> = ({
     <div className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
       <div style={{ textAlign: 'center', marginBottom: '30px' }}>
         <img 
-          src={`${import.meta.env.BASE_URL}Tournament manager logo.png`}
+          src="/CGC-Tournament-Manager/Tournament manager logo.png"
           alt="Tournament Manager" 
           style={{ 
             maxWidth: '100%',

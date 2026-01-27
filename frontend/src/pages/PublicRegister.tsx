@@ -97,7 +97,7 @@ const PublicRegister: React.FC = () => {
         boxShadow: '0 4px 20px rgba(255, 102, 0, 0.3)'
       }}>
         <img 
-          src={`${import.meta.env.BASE_URL}Tournament manager logo.png`}
+          src="/CGC-Tournament-Manager/Tournament manager logo.png"
           alt="Tournament Manager" 
           style={{ 
             maxWidth: '100%',

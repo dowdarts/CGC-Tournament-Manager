@@ -146,7 +146,7 @@ const TournamentLayout: React.FC<TournamentLayoutProps> = ({ children }) => {
         borderBottom: '3px solid #667eea'
       }}>
         <img 
-          src={`${import.meta.env.BASE_URL}Tournament manager logo.png`} 
+          src="/CGC-Tournament-Manager/Tournament manager logo.png" 
           alt="Tournament Manager" 
           style={{ 
             maxWidth: '100%',
