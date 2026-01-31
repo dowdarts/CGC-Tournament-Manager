@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Player } from '@/types';
 import { Trash2, Edit2, Check } from 'lucide-react';
+import EditPlayerModal from './EditPlayerModal';
 
 interface PlayerListProps {
   players: Player[];
@@ -21,11 +22,30 @@ const PlayerList: React.FC<PlayerListProps> = ({
   showPaidOnly = false,
   emptyMessage = 'No players yet.'
 }) => {
+  const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const handleTogglePaid = (player: Player) => {
     onUpdatePlayer({
       ...player,
       paid: !player.paid
     });
+  };
+
+  const handleEditClick = (player: Player) => {
+    setEditingPlayer(player);
+    setIsModalOpen(true);
+  };
+
+  const handleSavePlayer = (updatedPlayer: Player) => {
+    onUpdatePlayer(updatedPlayer);
+    setIsModalOpen(false);
+    setEditingPlayer(null);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingPlayer(null);
   };
 
   const filteredPlayers = showPaidOnly 
@@ -71,6 +91,15 @@ const PlayerList: React.FC<PlayerListProps> = ({
               <td>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
+                    onClick={() => handleEditClick(player)}
+                    className="button button-secondary"
+                    style={{ padding: '6px 12px', fontSize: '12px' }}
+                    disabled={isLoading}
+                    title="Edit player"
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                  <button
                     onClick={() => onDeletePlayer(player.id)}
                     className="button button-danger"
                     style={{ padding: '6px 12px', fontSize: '12px' }}
@@ -85,6 +114,16 @@ const PlayerList: React.FC<PlayerListProps> = ({
           ))}
         </tbody>
       </table>
+
+      {editingPlayer && (
+        <EditPlayerModal
+          player={editingPlayer}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          onSave={handleSavePlayer}
+          isLoading={isLoading}
+        />
+      )}
     </div>
   );
 };
