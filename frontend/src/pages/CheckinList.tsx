@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PlayerService, TournamentService } from '@/services/api';
 import { Player, Tournament } from '@/types';
-import { CheckCircle, UserPlus, Trash2, ExternalLink, Copy, Users, Info, ArrowRight } from 'lucide-react';
+import { CheckCircle, UserPlus, Trash2, Edit2, ExternalLink, Copy, Users, Info, ArrowRight } from 'lucide-react';
+import EditPlayerModal from '@/components/EditPlayerModal';
 
 const CheckinList: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -27,6 +28,8 @@ const CheckinList: React.FC = () => {
   const [previousPlayers, setPreviousPlayers] = useState<{ name: string; email?: string; phone?: string }[]>([]);
   const [previousPlayersFilter, setPreviousPlayersFilter] = useState('');
   const [selectedPreviousPlayers, setSelectedPreviousPlayers] = useState<Set<string>>(new Set());
+  const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Helper function to capitalize names properly
   const capitalizeName = (name: string): string => {
@@ -343,6 +346,28 @@ const CheckinList: React.FC = () => {
       setError('Failed to mark player as unpaid');
       console.error(err);
     }
+  };
+
+  const handleEditPlayer = (player: Player) => {
+    setEditingPlayer(player);
+    setIsEditModalOpen(true);
+  };
+
+  const handleSavePlayer = async (updatedPlayer: Player) => {
+    try {
+      await PlayerService.updatePlayer(updatedPlayer.id, updatedPlayer);
+      setIsEditModalOpen(false);
+      setEditingPlayer(null);
+      loadPlayers(true);
+    } catch (err) {
+      setError('Failed to update player');
+      console.error(err);
+    }
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditingPlayer(null);
   };
 
   const handleConfirmParticipants = async () => {
@@ -1043,6 +1068,20 @@ Moe Cormier,moec@gmail.com</pre>
                             {teamPlayers[0].paid ? 'Paid' : 'Unpaid'}
                           </button>
                           <button
+                            onClick={() => handleEditPlayer(teamPlayers[0])}
+                            className="button button-secondary"
+                            title="Edit player 1 info"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleEditPlayer(teamPlayers[1])}
+                            className="button button-secondary"
+                            title="Edit player 2 info"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                          <button
                             onClick={() => {
                               if (confirm(`Remove entire team from check-in list?`)) {
                                 teamPlayers.forEach(p => handleDeletePlayer(p.id, p.name));
@@ -1136,6 +1175,13 @@ Moe Cormier,moec@gmail.com</pre>
                       title={player.paid ? "Mark this player as unpaid" : "Mark this player as paid and add them to the Registration List"}
                     >
                       {player.paid ? 'Paid' : 'Unpaid'}
+                    </button>
+                    <button
+                      onClick={() => handleEditPlayer(player)}
+                      className="button button-secondary"
+                      title="Edit player info"
+                    >
+                      <Edit2 size={18} />
                     </button>
                     <button
                       onClick={() => handleDeletePlayer(player.id, player.name)}
@@ -1237,6 +1283,20 @@ Moe Cormier,moec@gmail.com</pre>
                             Paid
                           </button>
                           <button
+                            onClick={() => handleEditPlayer(teamPlayers[0])}
+                            className="button button-secondary"
+                            title="Edit player 1 info"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleEditPlayer(teamPlayers[1])}
+                            className="button button-secondary"
+                            title="Edit player 2 info"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                          <button
                             onClick={() => {
                               if (confirm(`Remove entire team from tournament?`)) {
                                 teamPlayers.forEach(p => handleDeletePlayer(p.id, p.name));
@@ -1285,6 +1345,13 @@ Moe Cormier,moec@gmail.com</pre>
                             Paid
                           </button>
                           <button
+                            onClick={() => handleEditPlayer(player)}
+                            className="button button-secondary"
+                            title="Edit player info"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                          <button
                             onClick={() => handleDeletePlayer(player.id, player.name)}
                             className="button button-danger"
                             title="Permanently remove this player from the tournament"
@@ -1330,6 +1397,13 @@ Moe Cormier,moec@gmail.com</pre>
                       title="Mark player as unpaid and move back to Check-in List"
                     >
                       Paid
+                    </button>
+                    <button
+                      onClick={() => handleEditPlayer(player)}
+                      className="button button-secondary"
+                      title="Edit player info"
+                    >
+                      <Edit2 size={18} />
                     </button>
                     <button
                       onClick={() => handleDeletePlayer(player.id, player.name)}
@@ -1409,6 +1483,16 @@ Moe Cormier,moec@gmail.com</pre>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Edit Player Modal */}
+      {editingPlayer && (
+        <EditPlayerModal
+          player={editingPlayer}
+          isOpen={isEditModalOpen}
+          onClose={handleCloseEditModal}
+          onSave={handleSavePlayer}
+        />
       )}
     </div>
   );
