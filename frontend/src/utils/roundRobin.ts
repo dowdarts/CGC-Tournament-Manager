@@ -157,7 +157,8 @@ function generateOptimizedRoundRobinWithBoards(
   
   console.log(`📋 Using optimized schedule for ${players.length} players (${schedule.length} rounds)`);
   
-  let matchIndex = 0; // Track board assignment across ALL rounds
+  // Track last board used by each player to prevent consecutive same-board assignments
+  const playerLastBoard = new Map<string, number>();
   
   schedule.forEach((round, roundIndex) => {
     const actualRound = roundIndex + 1;
@@ -181,9 +182,42 @@ function generateOptimizedRoundRobinWithBoards(
       const player1Id = playerIds[player1Index];
       const player2Id = playerIds[player2Index];
       
-      // Assign board using sequential assignment within the group's allocated boards
-      const boardIndex = matchIndex % totalBoards;
-      const boardNumber = boardNumbers[boardIndex];
+      // Find a board that neither player was on in their last match
+      let boardNumber: number;
+      const p1LastBoard = playerLastBoard.get(player1Id);
+      const p2LastBoard = playerLastBoard.get(player2Id);
+      
+      // Try to find a board that's different from both players' last boards
+      let foundGoodBoard = false;
+      for (let i = 0; i < totalBoards; i++) {
+        const candidateBoard = boardNumbers[i];
+        if (candidateBoard !== p1LastBoard && candidateBoard !== p2LastBoard) {
+          boardNumber = candidateBoard;
+          foundGoodBoard = true;
+          break;
+        }
+      }
+      
+      // If we can't avoid both (shouldn't happen with 2+ boards), at least avoid one
+      if (!foundGoodBoard) {
+        for (let i = 0; i < totalBoards; i++) {
+          const candidateBoard = boardNumbers[i];
+          if (candidateBoard !== p1LastBoard || candidateBoard !== p2LastBoard) {
+            boardNumber = candidateBoard;
+            foundGoodBoard = true;
+            break;
+          }
+        }
+      }
+      
+      // Fallback to first board (should never happen)
+      if (!foundGoodBoard) {
+        boardNumber = boardNumbers[0];
+      }
+      
+      // Update last board for both players
+      playerLastBoard.set(player1Id, boardNumber);
+      playerLastBoard.set(player2Id, boardNumber);
       
       matches.push({
         round: actualRound,
@@ -195,7 +229,6 @@ function generateOptimizedRoundRobinWithBoards(
       });
       
       console.log(`    Board ${boardNumber}: ${player1Name} vs ${player2Name}`);
-      matchIndex++;
     });
   });
   
@@ -228,7 +261,8 @@ function generateBasicRoundRobinWithBoards(
   
   console.log(`Basic Round-Robin: ${players.length} players, Boards: [${boardNumbers.join(', ')}], ${hasBye ? 'ODD (bye added)' : 'EVEN'}`);
   
-  let matchIndex = 0; // Track board assignment across ALL rounds
+  // Track last board used by each player
+  const playerLastBoard = new Map<string, number>();
   
   for (let round = 0; round < rounds; round++) {
     for (let matchNum = 0; matchNum < matchesPerRound; matchNum++) {
@@ -253,9 +287,41 @@ function generateBasicRoundRobinWithBoards(
         continue;
       }
       
-      // Use specific board numbers in sequential order
-      const boardIndex = matchIndex % totalBoards;
-      const boardNumber = boardNumbers[boardIndex];
+      const player1Id = participantIds[home];
+      const player2Id = participantIds[away];
+      
+      // Find a board that neither player was on in their last match
+      let boardNumber: number;
+      const p1LastBoard = playerLastBoard.get(player1Id);
+      const p2LastBoard = playerLastBoard.get(player2Id);
+      
+      let foundGoodBoard = false;
+      for (let i = 0; i < totalBoards; i++) {
+        const candidateBoard = boardNumbers[i];
+        if (candidateBoard !== p1LastBoard && candidateBoard !== p2LastBoard) {
+          boardNumber = candidateBoard;
+          foundGoodBoard = true;
+          break;
+        }
+      }
+      
+      if (!foundGoodBoard) {
+        for (let i = 0; i < totalBoards; i++) {
+          const candidateBoard = boardNumbers[i];
+          if (candidateBoard !== p1LastBoard || candidateBoard !== p2LastBoard) {
+            boardNumber = candidateBoard;
+            foundGoodBoard = true;
+            break;
+          }
+        }
+      }
+      
+      if (!foundGoodBoard) {
+        boardNumber = boardNumbers[0];
+      }
+      
+      playerLastBoard.set(player1Id, boardNumber);
+      playerLastBoard.set(player2Id, boardNumber);
       
       matches.push({
         round: round + 1,
@@ -265,8 +331,6 @@ function generateBasicRoundRobinWithBoards(
         player1_id: participantIds[home],
         player2_id: participantIds[away]
       });
-      
-      matchIndex++;
     }
   }
   
@@ -400,7 +464,8 @@ function generateBasicRoundRobin(
   
   console.log(`Basic Round-Robin: ${players.length} players, ${hasBye ? 'ODD (bye added)' : 'EVEN'}`);
   
-  let globalMatchCounter = 0; // Track board assignment across ALL rounds
+  // Track last board used by each player
+  const playerLastBoard = new Map<string, number>();
   
   for (let round = 0; round < rounds; round++) {
     for (let matchIndex = 0; matchIndex < matchesPerRound; matchIndex++) {
@@ -425,9 +490,39 @@ function generateBasicRoundRobin(
         continue;
       }
       
-      // Use global counter to rotate boards across all rounds
-      const board = (globalMatchCounter % boards) + 1;
-      globalMatchCounter++;
+      const player1Id = participantIds[home];
+      const player2Id = participantIds[away];
+      
+      // Find a board that neither player was on in their last match
+      let board: number;
+      const p1LastBoard = playerLastBoard.get(player1Id);
+      const p2LastBoard = playerLastBoard.get(player2Id);
+      
+      let foundGoodBoard = false;
+      for (let i = 1; i <= boards; i++) {
+        if (i !== p1LastBoard && i !== p2LastBoard) {
+          board = i;
+          foundGoodBoard = true;
+          break;
+        }
+      }
+      
+      if (!foundGoodBoard) {
+        for (let i = 1; i <= boards; i++) {
+          if (i !== p1LastBoard || i !== p2LastBoard) {
+            board = i;
+            foundGoodBoard = true;
+            break;
+          }
+        }
+      }
+      
+      if (!foundGoodBoard) {
+        board = 1;
+      }
+      
+      playerLastBoard.set(player1Id, board);
+      playerLastBoard.set(player2Id, board);
       
       matches.push({
         round: round + 1,
