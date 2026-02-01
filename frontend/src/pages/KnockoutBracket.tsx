@@ -2846,6 +2846,126 @@ const KnockoutBracket: React.FC = () => {
           </div>
         </div>
 
+        {/* Complete Knockout Bracket Banner - Shows when all matches are finished */}
+        {(() => {
+          const allMatches = Object.values(matches);
+          const totalMatches = allMatches.length;
+          const completedMatches = allMatches.filter(match => 
+            match.winnerId && match.s1 && match.s2 && match.s1 !== match.s2
+          );
+          const allMatchesComplete = totalMatches > 0 && completedMatches.length === totalMatches;
+          const isTournamentCompleted = tournament?.completed === true;
+
+          if (!allMatchesComplete) return null;
+
+          return (
+            <div
+              className="card"
+              style={{
+                marginBottom: "20px",
+                background: isTournamentCompleted 
+                  ? "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)"
+                  : "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
+                border: isTournamentCompleted ? "2px solid #22c55e" : "2px solid #f59e0b",
+                boxShadow: isTournamentCompleted 
+                  ? "0 8px 20px rgba(34, 197, 94, 0.3)"
+                  : "0 8px 20px rgba(251, 191, 36, 0.3)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: "15px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+                  <Trophy size={32} style={{ color: "#fff" }} />
+                  <div>
+                    <h2
+                      style={{
+                        fontSize: "20px",
+                        fontWeight: "700",
+                        color: "#fff",
+                        marginBottom: "5px",
+                      }}
+                    >
+                      {isTournamentCompleted ? "🎉 Tournament Completed!" : "🏆 All Matches Complete!"}
+                    </h2>
+                    <p style={{ fontSize: "14px", color: "rgba(255, 255, 255, 0.9)", margin: 0 }}>
+                      {isTournamentCompleted 
+                        ? "This tournament has been marked as completed and moved to the Completed section."
+                        : `All ${totalMatches} knockout matches have been finished. Complete the tournament to move it to the Completed section.`
+                      }
+                    </p>
+                  </div>
+                </div>
+
+                {!isTournamentCompleted && (
+                  <button
+                    onClick={async () => {
+                      if (!id) return;
+                      
+                      const confirmComplete = confirm(
+                        `Complete the tournament "${tournament?.name}"?\n\n` +
+                        `This will:\n` +
+                        `• Mark the tournament as completed\n` +
+                        `• Move it from Active to Completed tournaments\n` +
+                        `• Preserve all match data and results\n\n` +
+                        `Are you sure you want to proceed?`
+                      );
+                      
+                      if (!confirmComplete) return;
+                      
+                      try {
+                        await TournamentService.updateTournament(id, { 
+                          completed: true, 
+                          status: 'completed' 
+                        });
+                        
+                        setTournament(prev => prev ? { ...prev, status: 'completed', completed: true } : null);
+                        
+                        alert('🎉 Tournament completed successfully! You can find it in the Completed section on the Dashboard.');
+                      } catch (error) {
+                        console.error('Error completing tournament:', error);
+                        alert('Failed to complete tournament. Please try again.');
+                      }
+                    }}
+                    style={{
+                      padding: "15px 30px",
+                      background: "linear-gradient(135deg, #fff 0%, #f1f5f9 100%)",
+                      color: "#0f172a",
+                      border: "none",
+                      borderRadius: "10px",
+                      fontSize: "16px",
+                      fontWeight: "700",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.2)",
+                      transition: "all 0.2s",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = "translateY(-2px)";
+                      e.currentTarget.style.boxShadow = "0 6px 16px rgba(0, 0, 0, 0.3)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.2)";
+                    }}
+                  >
+                    <Trophy size={20} />
+                    Complete Knockout Bracket
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Bracket Display */}
         {viewMode === 'bracket' ? (
           // Traditional horizontal bracket view
