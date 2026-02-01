@@ -157,9 +157,10 @@ function generateOptimizedRoundRobinWithBoards(
   
   console.log(`📋 Using optimized schedule for ${players.length} players (${schedule.length} rounds)`);
   
+  let matchIndex = 0; // Track board assignment across ALL rounds
+  
   schedule.forEach((round, roundIndex) => {
     const actualRound = roundIndex + 1;
-    let matchIndex = 0;
     
     console.log(`  Round ${actualRound}:`);
     
