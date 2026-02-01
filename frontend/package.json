@@ -5,6 +5,7 @@
   "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
+    "dev:with-scraper": "concurrently \"vite\" \"node ../backend/scraper-control.js\"",
     "build": "vite build",
     "build:electron": "cross-env ELECTRON=true vite build",
     "preview": "vite preview",

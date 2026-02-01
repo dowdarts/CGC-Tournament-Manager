@@ -9,48 +9,32 @@ RETURNS INT
 LANGUAGE plpgsql
 AS $$
 DECLARE
+  groups_count INT;
+  advance_count INT;
   matches_count INT;
 BEGIN
-  CASE format_name
-    -- 1 Group Scenarios (Single Round Robin advancing to knockout)
-    WHEN '1_groups_2_advance' THEN
-      matches_count := promote_to_knockout(setup_knockout_bracket.tournament_id, 1, 2);
-    WHEN '1_groups_4_advance' THEN
-      matches_count := promote_to_knockout(setup_knockout_bracket.tournament_id, 1, 4);
-    WHEN '1_groups_8_advance' THEN
-      matches_count := promote_to_knockout(setup_knockout_bracket.tournament_id, 1, 8);
-    WHEN '1_groups_16_advance' THEN
-      matches_count := promote_to_knockout(setup_knockout_bracket.tournament_id, 1, 16);
-    
-    -- 2 Groups Scenarios
-    WHEN '2_groups_2_advance' THEN
-      matches_count := promote_to_knockout(setup_knockout_bracket.tournament_id, 2, 2);
-    WHEN '2_groups_4_advance' THEN
-      matches_count := promote_to_knockout(setup_knockout_bracket.tournament_id, 2, 4);
-    WHEN '2_groups_8_advance' THEN
-      matches_count := promote_to_knockout(setup_knockout_bracket.tournament_id, 2, 8);
-    
-    -- 4 Groups Scenarios
-    WHEN '4_groups_2_advance' THEN
-      matches_count := promote_to_knockout(setup_knockout_bracket.tournament_id, 4, 2);
-    WHEN '4_groups_4_advance' THEN
-      matches_count := promote_to_knockout(setup_knockout_bracket.tournament_id, 4, 4);
-    
-    -- 8 Groups Scenarios
-    WHEN '8_groups_2_advance' THEN
-      matches_count := promote_to_knockout(setup_knockout_bracket.tournament_id, 8, 2);
-    WHEN '8_groups_4_advance' THEN
-      matches_count := promote_to_knockout(setup_knockout_bracket.tournament_id, 8, 4);
-    
-    -- 16 Groups Scenarios
-    WHEN '16_groups_4_advance' THEN
-      matches_count := promote_to_knockout(setup_knockout_bracket.tournament_id, 16, 4);
-    
-    ELSE
-      RAISE EXCEPTION 'Unsupported tournament format: %. Use format like "4_groups_2_advance" or "1_groups_4_advance"', format_name;
-  END CASE;
+  -- Regex explanation: 
+  -- '(\d+)_groups_(\d+)_advance'
+  -- (\d+) captures one or more digits
+  
+  SELECT 
+    (regexp_matches(format_name, '(\d+)_groups_(\d+)_advance'))[1]::INT,
+    (regexp_matches(format_name, '(\d+)_groups_(\d+)_advance'))[2]::INT
+  INTO groups_count, advance_count;
+
+  -- Safety check: Ensure we actually got numbers
+  IF groups_count IS NULL OR advance_count IS NULL THEN
+    RAISE EXCEPTION 'Invalid format string: %. Expected format: "X_groups_Y_advance"', format_name;
+  END IF;
+
+  -- Execute the promotion logic using the extracted numbers
+  matches_count := promote_to_knockout(tournament_id, groups_count, advance_count);
   
   RETURN matches_count;
+
+EXCEPTION
+  WHEN others THEN
+    RAISE EXCEPTION 'Error processing format "%": %', format_name, SQLERRM;
 END;
 $$;
 

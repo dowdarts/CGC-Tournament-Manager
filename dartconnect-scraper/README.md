@@ -1,201 +1,331 @@
-# DartConnect Live Stream Scraper
+# CGC DartConnect Scraper Service
 
-## Overview
-This system creates a professional, branded scoreboard overlay for live streaming dart matches by scraping DartConnect's live match data in real-time. Perfect for tournament organizers who want custom branding without paying for DartConnect's Digital Steel events.
+Background service for automatically scraping live match scores from DartConnect tablets and submitting them to the tournament management system.
 
 ## Features
-- ✅ **Real-time scraping** of DartConnect live match data
-- ✅ **Professional overlay design** with custom branding
-- ✅ **OBS-ready** with transparent background
-- ✅ **Auto-reconnection** if connection drops
-- ✅ **Multiple concurrent matches** support
-- ✅ **Live indicators** and animations
-- ✅ **Responsive design** for different screen sizes
 
-## System Architecture
+- ✅ **24/7 Background Operation** - Runs independently of the frontend
+- ✅ **Multi-Tablet Support** - Monitor up to 4 DartConnect watch codes simultaneously
+- ✅ **Automatic Player Matching** - Intelligently matches DartConnect players to tournament roster
+- ✅ **Auto-Accept Scores** - Optional automatic approval of high-confidence matches
+- ✅ **Real-time Monitoring** - Checks for match completion every 5 seconds
+- ✅ **Auto-Restart** - Automatically restarts on crashes with PM2
+- ✅ **Detailed Logging** - Winston logger with file and console output
 
-```
-DartConnect TV → Puppeteer Scraper → Supabase Realtime → Stream Overlay → OBS
-```
+## How It Works
 
-### Components
-1. **Scraper** (`dartconnect-scraper/scraper.js`) - Node.js Puppeteer bot
-2. **Database** (`scraper_sessions` table) - Stores session data
-3. **Overlay** (`/stream-overlay`) - React component for OBS
-4. **Realtime** - Supabase broadcasts for instant updates
+1. **Database Polling**: Service checks the tournament settings every 10 seconds for active watch codes
+2. **Browser Automation**: Launches Puppeteer instances for each watch code
+3. **Match Monitoring**: Scrapes DartConnect pages every 5 seconds for match completion
+4. **Player Matching**: Uses PostgreSQL function to match player names (exact or fuzzy matching)
+5. **Result Submission**: Creates pending results in the database for review/auto-approval
+6. **Graceful Shutdown**: Stops all browsers when watch codes are removed
 
-## Quick Start
+## Prerequisites
 
-### 1. Setup Database
-Apply the migration in Supabase Dashboard:
-```sql
--- Copy contents of backend/migration_add_scraper_sessions.sql
-```
-Navigate to: https://supabase.com/dashboard/project/pfujbgwgsxuhgvmeatjh/sql
+- Node.js 16+ and npm
+- Access to Supabase database (Service Role Key required)
+- Chrome/Chromium for Puppeteer (auto-installed)
+- PM2 (optional, for production deployment)
 
-### 2. Install Scraper Dependencies
+## Installation
+
+### 1. Install Dependencies
+
 ```bash
 cd dartconnect-scraper
 npm install
 ```
 
-### 3. Start a DartConnect Match
-1. Create a match on DartConnect
-2. Get the **Watch Code** (e.g., "ABC123")
-3. Note the URL: `https://tv.dartconnect.com/live/ABC123`
+### 2. Install PM2 (Optional - For Production)
 
-### 4. Run the Scraper
 ```bash
-# Replace ABC123 with your actual watch code
-node scraper.js ABC123
+npm install -g pm2
 ```
 
-### 5. Setup OBS Overlay
-1. Open OBS Studio
-2. Add **Browser Source**
-3. URL: `http://localhost:5173/stream-overlay?obs=true`
-4. Size: 800x400 (adjust as needed)
-5. Check "Shutdown source when not visible"
+### 3. Configure Environment Variables
 
-### 6. Go Live!
-The overlay will show live scores, player names, legs, and active player indicator.
+Copy `.env.example` to `.env`:
 
-## Detailed Setup
+```bash
+cp .env.example .env
+```
 
-### Environment Variables
-Create `.env` in the `dartconnect-scraper` folder:
+Edit `.env` with your settings:
+
 ```env
-SUPABASE_URL=https://pfujbgwgsxuhgvmeatjh.supabase.co
-SUPABASE_ANON_KEY=your-anon-key-here
+# Supabase Configuration
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_KEY=your-service-role-key-here
+
+# Tournament Configuration
+TOURNAMENT_ID=your-tournament-uuid-here
+
+# Scraper Settings
+POLL_INTERVAL_MS=10000              # Check DB every 10 seconds
+SCRAPER_CHECK_INTERVAL_MS=5000      # Check DartConnect every 5 seconds
+MAX_CONCURRENT_SCRAPERS=4
+
+# Logging
+LOG_LEVEL=info
+LOG_FILE=logs/scraper.log
+
+# Environment
+NODE_ENV=production
 ```
 
-### Scraper Usage
+### 4. Get Your Configuration Values
+
+#### Supabase URL and Service Key
+1. Go to [Supabase Dashboard](https://app.supabase.com)
+2. Select your project
+3. Go to **Settings** → **API**
+4. Copy:
+   - **Project URL** → `SUPABASE_URL`
+   - **Service Role Key** → `SUPABASE_SERVICE_KEY` (⚠️ Keep this secret!)
+
+#### Tournament ID
+1. Open your tournament in the CGC Tournament Manager
+2. Copy the UUID from the URL: `/tournament/{uuid}`
+3. Paste into `TOURNAMENT_ID`
+
+## Usage
+
+### Development Mode (with auto-restart on code changes)
+
 ```bash
-# Basic usage
-node scraper.js WATCH_CODE
-
-# Example with real watch code
-node scraper.js XYZ789
-
-# The scraper will:
-# 1. Open DartConnect TV page in headless browser
-# 2. Scrape live match data every second
-# 3. Broadcast updates to Supabase realtime
-# 4. Store session data for overlay recovery
+npm run dev
 ```
 
-### Overlay Configuration
-Visit the overlay setup page:
-- **Control Panel**: `http://localhost:5173/stream-overlay`
-- **OBS Mode**: `http://localhost:5173/stream-overlay?obs=true`
+### Production Mode (manual start)
 
-#### OBS Setup Details
-1. **Browser Source Settings**:
-   - URL: Full overlay URL with `?obs=true`
-   - Width: 800, Height: 400
-   - FPS: 30 (default is fine)
-   - Custom CSS: (optional for positioning)
-   
-2. **Position the Overlay**:
-   - Drag to desired location (typically bottom third)
-   - Scale as needed
-   - Set above your main camera feed
+```bash
+npm start
+```
 
-## Customization
+### Production Mode (with PM2 - Recommended)
 
-### Branding
-Edit `StreamOverlay.tsx` to customize:
-- **Colors**: Change gradient and theme colors
-- **Logo**: Replace the monitor icon with your logo
-- **Text**: Update "CGC TOURNAMENT" to your brand
-- **Layout**: Adjust positioning and sizing
+```bash
+# Start the service
+npm run pm2:start
 
-### Match Data Structure
-The scraper provides this data structure:
-```javascript
-{
-  player1: {
-    name: "John Doe",
-    score: "301",      // Current score
-    legs: "2",         // Legs won
-    isActive: true     // Currently throwing
-  },
-  player2: {
-    name: "Jane Smith",
-    score: "180", 
-    legs: "1",
-    isActive: false
-  },
-  match: {
-    format: "First to 3 legs",
-    currentLeg: "3",
-    lastThrow: "180"   // Last dart score
-  },
-  timestamp: 1640995200000
-}
+# Check status
+npm run pm2:status
+
+# View logs
+npm run pm2:logs
+
+# Restart service
+npm run pm2:restart
+
+# Stop service
+npm run pm2:stop
+```
+
+## How to Use with Tournament Manager
+
+### Step 1: Enable DartConnect Integration
+
+1. Open your tournament in CGC Tournament Manager
+2. Go to **Settings** tab
+3. Toggle **Enable DartConnect Integration** to ON
+4. Configure settings:
+   - **Auto-Accept Scores**: Automatically approve high-confidence matches
+   - **Require Manual Approval**: Force manual review for all results
+
+### Step 2: Add Watch Codes
+
+1. Get watch codes from DartConnect tablets (e.g., `ABCD`)
+2. Enter up to 4 watch codes in the **Active Watch Codes** section
+3. Click **Save Watch Codes**
+
+### Step 3: Start the Scraper Service
+
+The scraper service will:
+- Detect the watch codes automatically
+- Launch browsers for each watch code
+- Monitor matches in real-time
+- Submit results when matches complete
+
+### Step 4: Review Results
+
+- **Auto-Accept ON**: High-confidence matches are automatically applied
+- **Manual Review**: Go to **Match Results** tab to approve/reject pending results
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Tournament Manager Frontend (React)                    │
+│  - Settings: Enable integration, add watch codes        │
+│  - Match Results: Review pending results                │
+└─────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│  Supabase Database (PostgreSQL)                         │
+│  - tournaments.dartconnect_watch_codes                  │
+│  - pending_match_results                                │
+│  - match_dartconnect_players() function                 │
+└─────────────────────────────────────────────────────────┘
+                          ▲
+                          │
+┌─────────────────────────────────────────────────────────┐
+│  DartConnect Scraper Service (Node.js)                  │
+│  ├── index.js           (Main orchestrator)             │
+│  ├── dartconnect-scraper.js  (Puppeteer logic)          │
+│  └── config.js          (Environment config)            │
+└─────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│  DartConnect TV                                         │
+│  - https://tv.dartconnect.com/history/match/{code}      │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Logging
+
+Logs are written to:
+- **Console**: Real-time output when running
+- **File**: `logs/scraper.log` (configurable)
+- **PM2 Logs**: `logs/pm2-out.log` and `logs/pm2-error.log`
+
+View logs:
+
+```bash
+# Tail logs in real-time
+npm run pm2:logs
+
+# Or view file directly
+tail -f logs/scraper.log
 ```
 
 ## Troubleshooting
 
-### Scraper Issues
+### Scraper Not Starting
+
+**Check configuration:**
+
 ```bash
-# Check if DartConnect page loads
-node -e "
-const puppeteer = require('puppeteer');
-(async () => {
-  const browser = await puppeteer.launch({headless: false});
-  const page = await browser.newPage();
-  await page.goto('https://tv.dartconnect.com/live/YOUR_CODE');
-  await page.waitForTimeout(10000);
-  await browser.close();
-})();
-"
-
-# Common fixes:
-# 1. Update watch code
-# 2. Check DartConnect is working
-# 3. Verify Supabase connection
-# 4. Update CSS selectors if DartConnect changes layout
+node -e "console.log(require('./config'))"
 ```
 
-### Overlay Issues
-1. **No data showing**: Check scraper is running
-2. **OBS not transparent**: Ensure ?obs=true parameter
-3. **Connection lost**: Overlay auto-reconnects every 5 seconds
-4. **Wrong scores**: Restart scraper to refresh selectors
+**Verify database connection:**
+- Ensure `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` are correct
+- Test connection in Supabase Dashboard
 
-### CSS Selectors
-DartConnect may update their HTML structure. If scraping fails, update selectors in `scraper.js`:
-```javascript
-// Check browser developer tools on DartConnect TV page
-// Update these selectors as needed:
-const getPlayerScore = (playerNum) => {
-  const selectors = [
-    `#p${playerNum}_score`,        // Most common
-    `.player-${playerNum}-score`,   // Alternative
-    `.score-${playerNum}`,         // Backup
-    `[data-player="${playerNum}"] .score`
-  ];
-  // ...
-};
-```
+### No Matches Being Detected
 
-## Advanced Usage
+**Check watch codes:**
+- Ensure watch codes are entered in Settings tab
+- Verify watch codes are valid on DartConnect
+- Check scraper logs for errors
 
-### Multiple Matches
-Run multiple scrapers for different matches:
+**Manual test:**
+
 ```bash
-# Terminal 1
-node scraper.js ABC123
-
-# Terminal 2  
-node scraper.js DEF456
-
-# Each creates separate Supabase channel
-# Use different overlay URLs for each match
+# Visit DartConnect page directly
+https://tv.dartconnect.com/history/match/YOUR_CODE
 ```
 
-### Production Deployment
+### Player Names Not Matching
+
+**Check player names in database:**
+- Ensure players are added to tournament roster
+- Player names must match DartConnect names (case-insensitive)
+- Fuzzy matching allows partial matches
+
+**Test matching function in Supabase SQL Editor:**
+
+```sql
+SELECT * FROM match_dartconnect_players(
+  'your-tournament-id',
+  'Player 1 Name',
+  'Player 2 Name'
+);
+```
+
+### Scraper Crashes
+
+**Check PM2 status:**
+
+```bash
+npm run pm2:status
+```
+
+**View error logs:**
+
+```bash
+npm run pm2:logs
+```
+
+**Common issues:**
+- Out of memory: Reduce `MAX_CONCURRENT_SCRAPERS`
+- Puppeteer errors: Install Chrome dependencies
+- Network timeouts: Check internet connection
+
+### PM2 Not Starting
+
+**Install Chrome dependencies (Linux):**
+
+```bash
+sudo apt-get install -y \
+  chromium-browser \
+  libx11-xcb1 \
+  libxcomposite1 \
+  libxdamage1 \
+  libxrandr2 \
+  libgbm1 \
+  libnss3 \
+  libatk1.0-0 \
+  libatk-bridge2.0-0 \
+  libcups2 \
+  libxkbcommon0 \
+  libpangocairo-1.0-0
+```
+
+## Performance
+
+- **CPU Usage**: ~2-5% per active scraper
+- **Memory Usage**: ~150-200 MB per Puppeteer instance
+- **Network**: Minimal (checks every 5 seconds)
+- **Recommended**: 4 scrapers max on standard hardware
+
+## Security
+
+⚠️ **Important Security Notes:**
+
+- **Service Role Key**: Keep `SUPABASE_SERVICE_KEY` secret! Never commit to Git.
+- **File Permissions**: Ensure `.env` is readable only by service user
+- **Network Access**: Service needs outbound access to Supabase and DartConnect
+- **RLS Bypass**: Service role key bypasses Row Level Security policies
+
+## Updates
+
+### Updating Watch Codes
+
+No restart needed! The service polls the database every 10 seconds and automatically:
+- Starts scrapers for new watch codes
+- Stops scrapers for removed watch codes
+
+### Updating Configuration
+
+Restart required for `.env` changes:
+
+```bash
+npm run pm2:restart
+```
+
+## Support
+
+- **Frontend Issues**: Check CGC-Tournament-Manager repository
+- **Database Issues**: Run migration in Supabase SQL Editor
+- **Scraper Issues**: Check logs in `logs/scraper.log`
+
+## License
+
+MIT
 For production streaming:
 1. **Deploy scraper** on dedicated server/VPS
 2. **Use GitHub Pages** for overlay hosting

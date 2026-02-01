@@ -199,8 +199,35 @@ export interface PendingMatchResult {
   total_legs_played?: number;
   match_duration_minutes?: number;
   
+  // Detailed Statistics for Tale of the Tape
+  player1_darts_thrown?: number;
+  player1_first_9_average?: number;
+  player1_checkout_attempts?: number;
+  player1_checkouts_completed?: number;
+  player1_checkout_percentage?: number;
+  player1_100_plus?: number;
+  player1_120_plus?: number;
+  player1_140_plus?: number;
+  player1_160_plus?: number;
+  player1_ton_plus_finishes?: number;
+  
+  player2_darts_thrown?: number;
+  player2_first_9_average?: number;
+  player2_checkout_attempts?: number;
+  player2_checkouts_completed?: number;
+  player2_checkout_percentage?: number;
+  player2_100_plus?: number;
+  player2_120_plus?: number;
+  player2_140_plus?: number;
+  player2_160_plus?: number;
+  player2_ton_plus_finishes?: number;
+  
   // Status
-  status: 'pending' | 'approved' | 'rejected' | 'auto-accepted';
+  status: 'live' | 'pending' | 'approved' | 'rejected' | 'auto-accepted';
+  
+  // Live Match Tracking
+  is_live: boolean;
+  live_updated_at?: string;
   
   // Matching Info
   confidence_score?: number;

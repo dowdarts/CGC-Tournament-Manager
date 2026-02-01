@@ -36,14 +36,28 @@ export default function DartConnectSettings({ tournament, onUpdate }: DartConnec
   const [connectionLog, setConnectionLog] = useState<string[]>([]);
   const [watchCodes, setWatchCodes] = useState<string[]>(['', '', '', '']);
   const [savingWatchCodes, setSavingWatchCodes] = useState(false);
+  const [scraperStatus, setScraperStatus] = useState<'stopped' | 'starting' | 'running' | 'stopping'>('stopped');
+  const [controlServerStatus, setControlServerStatus] = useState<'running' | 'stopped'>('stopped');
 
   useEffect(() => {
     loadPendingCount();
     loadWatchCodes();
+    checkControlServer();
+    checkScraperStatus();
     if (integrationEnabled) {
       checkConnection();
-      // Check connection every 30 seconds
-      const interval = setInterval(checkConnection, 30000);
+      // Check connection and scraper status every 30 seconds
+      const interval = setInterval(() => {
+        checkControlServer();
+        checkConnection();
+        checkScraperStatus();
+      }, 30000);
+      return () => clearInterval(interval);
+    } else {
+      // When disabled, still check control server status
+      const interval = setInterval(() => {
+        checkControlServer();
+      }, 10000);
       return () => clearInterval(interval);
     }
   }, [tournament.id, integrationEnabled]);
@@ -99,6 +113,97 @@ export default function DartConnectSettings({ tournament, onUpdate }: DartConnec
   const addLog = (message: string) => {
     const timestamp = new Date().toLocaleTimeString();
     setConnectionLog(prev => [`[${timestamp}] ${message}`, ...prev].slice(0, 10));
+  };
+
+  const startScraperService = async () => {
+    if (controlServerStatus !== 'running') {
+      addLog('❌ Control server must be running first');
+      addLog('💡 Click "Start Control Server" button above');
+      return;
+    }
+
+    try {
+      setScraperStatus('starting');
+      addLog('🚀 Starting DartConnect scraper service...');
+      
+      const response = await fetch('http://localhost:3001/api/scraper/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setScraperStatus('running');
+        addLog('✅ Scraper service started successfully');
+        checkConnection();
+      } else {
+        setScraperStatus('stopped');
+        addLog(`⚠️ ${data.message}`);
+      }
+    } catch (error: any) {
+      setScraperStatus('stopped');
+      addLog(`❌ Control server not reachable`);
+      addLog('💡 Make sure control server is started');
+      console.error('Failed to start scraper:', error);
+    }
+  };
+
+  const stopScraperService = async () => {
+    try {
+      setScraperStatus('stopping');
+      addLog('🛑 Stopping DartConnect scraper service...');
+      
+      const response = await fetch('http://localhost:3001/api/scraper/stop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const data = await response.json();
+      setScraperStatus('stopped');
+      addLog('✅ Scraper service stopped');
+    } catch (error: any) {
+      setScraperStatus('stopped');
+      addLog('⚠️ Scraper stopped (control server not reachable)');
+      console.error('Failed to stop scraper:', error);
+    }
+  };
+
+  const checkControlServer = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/health', {
+        signal: AbortSignal.timeout(2000)
+      });
+      const data = await response.json();
+      if (data.status === 'ok') {
+        setControlServerStatus('running');
+        return true;
+      }
+    } catch (error) {
+      // Expected when control server not started yet - don't log to console
+      setControlServerStatus('stopped');
+      return false;
+    }
+    return false;
+  };
+
+
+
+  const checkScraperStatus = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/scraper/status', {
+        signal: AbortSignal.timeout(2000)
+      });
+      const data = await response.json();
+      setScraperStatus(data.status || 'stopped');
+      
+      if (data.running) {
+        addLog(`✓ Scraper is running (PID: ${data.pid})`);
+      }
+    } catch (error) {
+      // Expected when control server not running - don't log to console
+      setScraperStatus('stopped');
+    }
   };
 
   const checkConnection = async () => {
@@ -172,6 +277,45 @@ export default function DartConnectSettings({ tournament, onUpdate }: DartConnec
         automatically or manually applied to your tournament.
       </p>
 
+      {/* Control Server Status */}
+      <div className="settings-card control-server-card">
+        <div className="setting-item">
+          <div className="setting-header">
+            <div className="setting-title">
+              {controlServerStatus === 'running' ? (
+                <CheckCircle size={20} className="icon-success" />
+              ) : (
+                <AlertCircle size={20} className="icon-danger" />
+              )}
+              <div>
+                <h3>Control Server Status</h3>
+                <p className="setting-description">
+                  {controlServerStatus === 'running' 
+                    ? 'Control server is running - you can now enable DartConnect integration below'
+                    : 'Control server not running. Start it to enable DartConnect integration.'}
+                </p>
+              </div>
+            </div>
+            <span className={`status-badge status-${controlServerStatus === 'running' ? 'connected' : 'disconnected'}`}>
+              {controlServerStatus === 'running' ? '🟢 Running' : '🔴 Stopped'}
+            </span>
+          </div>
+        </div>
+        
+        {controlServerStatus === 'stopped' && (
+          <div className="control-server-instructions">
+            <h4>Start the control server to enable DartConnect</h4>
+            <p>Run this command to start both the frontend and control server:</p>
+            <div className="code-block">
+              <code>npm run dev:with-scraper</code>
+            </div>
+            <p className="instructions-note">
+              The control server runs in the background and manages the DartConnect scraper.
+            </p>
+          </div>
+        )}
+      </div>
+
       <div className="settings-card">
         <div className="setting-item">
           <div className="setting-header">
@@ -181,6 +325,9 @@ export default function DartConnectSettings({ tournament, onUpdate }: DartConnec
                 <h3>Enable DartConnect Integration</h3>
                 <p className="setting-description">
                   Allow match scores to be captured from DartConnect scoring tablets
+                  {controlServerStatus !== 'running' && (
+                    <span className="warning-text"> (Start control server first)</span>
+                  )}
                 </p>
               </div>
             </div>
@@ -188,7 +335,25 @@ export default function DartConnectSettings({ tournament, onUpdate }: DartConnec
               <input
                 type="checkbox"
                 checked={integrationEnabled}
-                onChange={(e) => setIntegrationEnabled(e.target.checked)}
+                disabled={!integrationEnabled && controlServerStatus !== 'running'}
+                onChange={async (e) => {
+                  const enabled = e.target.checked;
+                  
+                  // Allow turning OFF at any time, but check server before turning ON
+                  if (enabled && controlServerStatus !== 'running') {
+                    addLog('❌ Control server must be running to enable integration');
+                    addLog('💡 Click "Start Control Server" button above');
+                    return;
+                  }
+                  
+                  setIntegrationEnabled(enabled);
+                  
+                  if (enabled) {
+                    await startScraperService();
+                  } else {
+                    await stopScraperService();
+                  }
+                }}
               />
               <span className="toggle-slider"></span>
             </label>
@@ -211,6 +376,20 @@ export default function DartConnectSettings({ tournament, onUpdate }: DartConnec
                     {connectionStatus === 'connected' && 'Connected'}
                     {connectionStatus === 'disconnected' && 'Disconnected'}
                     {connectionStatus === 'checking' && 'Checking...'}
+                  </span>
+                </h3>
+              </div>
+              <div className="connection-header scraper-status-header">
+                {scraperStatus === 'running' && <CheckCircle size={20} className="icon-success" />}
+                {scraperStatus === 'stopped' && <AlertCircle size={20} className="icon-danger" />}
+                {(scraperStatus === 'starting' || scraperStatus === 'stopping') && <AlertCircle size={20} className="icon-warning" />}
+                <h3>
+                  Scraper Service: {' '}
+                  <span className={`status-badge status-${scraperStatus === 'running' ? 'connected' : scraperStatus === 'stopped' ? 'disconnected' : 'checking'}`}>
+                    {scraperStatus === 'running' && '🟢 Running'}
+                    {scraperStatus === 'stopped' && '🔴 Stopped'}
+                    {scraperStatus === 'starting' && '🟡 Starting...'}
+                    {scraperStatus === 'stopping' && '🟡 Stopping...'}
                   </span>
                 </h3>
               </div>

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DartConnectService } from '@/services/api';
 import { PendingMatchResult } from '@/types';
-import { Check, X, AlertCircle, TrendingUp, Trophy, Target, Zap } from 'lucide-react';
+import { Check, X, AlertCircle, TrendingUp, Trophy, Target, Zap, ChevronDown, ChevronUp } from 'lucide-react';
+import TaleOfTheTape from '@/components/TaleOfTheTape';
 import '@/styles/MatchResultsManager.css';
 
 /**
@@ -17,14 +18,36 @@ export default function MatchResultsManager() {
   const navigate = useNavigate();
   
   const [pendingResults, setPendingResults] = useState<PendingMatchResult[]>([]);
+  const [liveMatches, setLiveMatches] = useState<PendingMatchResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
-  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'auto-accepted'>('pending');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'live' | 'pending' | 'approved' | 'rejected' | 'auto-accepted'>('pending');
   const [error, setError] = useState<string | null>(null);
+  const [expandedResults, setExpandedResults] = useState<Set<string>>(new Set());
+
+  const toggleExpanded = (resultId: string) => {
+    setExpandedResults(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(resultId)) {
+        newSet.delete(resultId);
+      } else {
+        newSet.add(resultId);
+      }
+      return newSet;
+    });
+  };
 
   useEffect(() => {
     if (tournamentId) {
       loadPendingResults();
+      // Set up auto-refresh for live matches every 3 seconds
+      const interval = setInterval(() => {
+        if (filterStatus === 'live' || filterStatus === 'all') {
+          loadPendingResults();
+        }
+      }, 3000);
+      
+      return () => clearInterval(interval);
     }
   }, [tournamentId, filterStatus]);
 
@@ -34,7 +57,13 @@ export default function MatchResultsManager() {
       setError(null);
       const statusFilter = filterStatus === 'all' ? undefined : filterStatus;
       const results = await DartConnectService.getPendingResults(tournamentId!, statusFilter);
-      setPendingResults(results);
+      
+      // Separate live matches from others
+      const live = results.filter(r => r.is_live && r.status === 'live');
+      const others = results.filter(r => !r.is_live || r.status !== 'live');
+      
+      setLiveMatches(live);
+      setPendingResults(filterStatus === 'live' ? live : others);
     } catch (err: any) {
       console.error('Failed to load pending results:', err);
       setError(err.message || 'Failed to load match results');
@@ -70,7 +99,16 @@ export default function MatchResultsManager() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, isLive: boolean = false) => {
+    if (isLive && status === 'live') {
+      return (
+        <span className="status-badge live">
+          <Zap size={14} className="pulse" />
+          LIVE
+        </span>
+      );
+    }
+    
     const badges = {
       pending: { className: 'status-badge pending', text: 'Pending Review', icon: AlertCircle },
       approved: { className: 'status-badge approved', text: 'Approved', icon: Check },
@@ -139,10 +177,16 @@ export default function MatchResultsManager() {
 
       <div className="filters">
         <button 
+          className={filterStatus === 'live' ? 'active' : ''}
+          onClick={() => setFilterStatus('live')}
+        >
+          🔴 Live ({liveMatches.length})
+        </button>
+        <button 
           className={filterStatus === 'pending' ? 'active' : ''}
           onClick={() => setFilterStatus('pending')}
         >
-          Pending ({pendingResults.filter(r => r.status === 'pending').length})
+          Pending ({pendingResults.filter(r => r.status === 'pending' && !r.is_live).length})
         </button>
         <button 
           className={filterStatus === 'approved' ? 'active' : ''}
@@ -175,22 +219,37 @@ export default function MatchResultsManager() {
           <Target size={64} className="empty-icon" />
           <h2>No Match Results</h2>
           <p>
-            {filterStatus === 'pending' 
+            {filterStatus === 'live'
+              ? 'No live matches. Matches will appear here when scrapers connect to DartConnect.'
+              : filterStatus === 'pending' 
               ? 'No pending results to review. Match results will appear here when scrapers detect completed matches.'
               : `No ${filterStatus} results found.`
             }
           </p>
         </div>
       ) : (
-        <div className="results-grid">
-          {pendingResults.map(result => (
-            <div key={result.id} className={`result-card ${result.status}`}>
-              <div className="card-header">
-                <div className="watch-code">
-                  Watch Code: <strong>{result.watch_code}</strong>
+        <>
+          {filterStatus === 'live' && liveMatches.length > 0 && (
+            <div className="live-matches-section">
+              <h2 className="section-title">🔴 Live Matches</h2>
+              <p className="section-subtitle">Scores update automatically every 3 seconds</p>
+            </div>
+          )}
+          
+          <div className="results-grid">
+            {pendingResults.map(result => (
+              <div key={result.id} className={`result-card ${result.status} ${result.is_live ? 'live-match' : ''}`}>
+                <div className="card-header">
+                  <div className="watch-code">
+                    Watch Code: <strong>{result.watch_code}</strong>
+                    {result.is_live && result.live_updated_at && (
+                      <span className="last-update">
+                        Updated {new Date(result.live_updated_at).toLocaleTimeString()}
+                      </span>
+                    )}
+                  </div>
+                  {getStatusBadge(result.status, result.is_live)}
                 </div>
-                {getStatusBadge(result.status)}
-              </div>
 
               <div className="match-info">
                 <div className="player-result">
@@ -281,7 +340,31 @@ export default function MatchResultsManager() {
                 )}
               </div>
 
-              {result.status === 'pending' && (
+              {/* Tale of the Tape - Expandable Statistics */}
+              <div className="stats-section">
+                <button 
+                  className="stats-toggle"
+                  onClick={() => toggleExpanded(result.id)}
+                >
+                  {expandedResults.has(result.id) ? (
+                    <>
+                      <ChevronUp size={18} />
+                      Hide Detailed Statistics
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown size={18} />
+                      Show Detailed Statistics
+                    </>
+                  )}
+                </button>
+                
+                {expandedResults.has(result.id) && (
+                  <TaleOfTheTape result={result} />
+                )}
+              </div>
+
+              {result.status === 'pending' && !result.is_live && (
                 <div className="card-actions">
                   <button
                     className="btn-approve"
@@ -302,6 +385,12 @@ export default function MatchResultsManager() {
                   </button>
                 </div>
               )}
+              
+              {result.is_live && (
+                <div className="live-notice">
+                  ⚡ Match in progress - Approve/reject options will appear when match completes
+                </div>
+              )}
 
               {result.status !== 'pending' && result.processed_at && (
                 <div className="processed-info">
@@ -311,7 +400,8 @@ export default function MatchResultsManager() {
               )}
             </div>
           ))}
-        </div>
+          </div>
+        </>
       )}
     </div>
   );

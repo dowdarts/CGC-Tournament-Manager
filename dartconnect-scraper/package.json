@@ -1,27 +1,27 @@
 {
-  "name": "dartconnect-scraper",
+  "name": "cgc-dartconnect-scraper",
   "version": "1.0.0",
-  "description": "Real-time DartConnect live match scraper for custom livestream overlays",
-  "main": "scraper.js",
+  "description": "Background service for scraping DartConnect live match scores for tournament management",
+  "main": "index.js",
   "scripts": {
-    "start": "node scraper.js",
-    "dev": "nodemon scraper.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop dartconnect-scraper",
+    "pm2:restart": "pm2 restart dartconnect-scraper",
+    "pm2:logs": "pm2 logs dartconnect-scraper",
+    "pm2:status": "pm2 status dartconnect-scraper"
   },
   "dependencies": {
-    "puppeteer": "^22.0.0",
     "@supabase/supabase-js": "^2.39.0",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "puppeteer": "^21.7.0",
+    "winston": "^3.11.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
   },
-  "keywords": [
-    "dartconnect",
-    "scraper",
-    "livestream",
-    "darts",
-    "obs"
-  ],
+  "keywords": ["dartconnect", "scraper", "puppeteer", "darts", "tournament", "cgc"],
   "author": "",
   "license": "MIT"
 }

@@ -57,6 +57,89 @@
   margin-bottom: 2rem;
 }
 
+.control-server-card {
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, #1a1a1a 0%, #1e2a3a 100%);
+}
+
+.control-server-instructions {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #2a2a2a;
+  border-radius: 8px;
+  border-left: 3px solid #3b82f6;
+}
+
+.control-server-instructions h4 {
+  margin: 0 0 0.75rem 0;
+  color: #ffffff;
+  font-size: 0.95rem;
+}
+
+.start-server-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.start-server-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(59, 130, 246, 0.4);
+}
+
+.start-server-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #4a4a4a;
+}
+
+.start-server-btn:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.instructions-note {
+  margin: 0.5rem 0 0 0;
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.instructions-note code {
+  background: #0d1117;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  color: #58a6ff;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+}
+
+.control-server-instructions p {
+  margin: 0.5rem 0;
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.code-block {
+  background: #0d1117;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  font-family: 'Courier New', monospace;
+}
+
+.code-block code {
+  color: #58a6ff;
+  font-size: 0.9rem;
+}
+
 .setting-item {
   padding: 0.5rem 0;
 }
@@ -153,6 +236,22 @@
 
 .toggle-switch input:checked + .toggle-slider:before {
   transform: translateX(26px);
+}
+
+.toggle-switch input:disabled + .toggle-slider {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #4a4a4a;
+}
+
+.toggle-switch input:disabled:checked + .toggle-slider {
+  background-color: #5a7fa8;
+}
+
+.warning-text {
+  color: #f59e0b;
+  font-weight: 600;
+  font-size: 0.9em;
 }
 
 .setting-divider {
@@ -281,6 +380,10 @@
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 1rem;
+}
+
+.scraper-status-header {
+  margin-top: 0.625rem;
 }
 
 .connection-header h3 {

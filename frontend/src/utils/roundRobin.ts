@@ -227,9 +227,9 @@ function generateBasicRoundRobinWithBoards(
   
   console.log(`Basic Round-Robin: ${players.length} players, Boards: [${boardNumbers.join(', ')}], ${hasBye ? 'ODD (bye added)' : 'EVEN'}`);
   
+  let matchIndex = 0; // Track board assignment across ALL rounds
+  
   for (let round = 0; round < rounds; round++) {
-    let matchIndex = 0;
-    
     for (let matchNum = 0; matchNum < matchesPerRound; matchNum++) {
       let home: number, away: number;
       
@@ -399,6 +399,8 @@ function generateBasicRoundRobin(
   
   console.log(`Basic Round-Robin: ${players.length} players, ${hasBye ? 'ODD (bye added)' : 'EVEN'}`);
   
+  let globalMatchCounter = 0; // Track board assignment across ALL rounds
+  
   for (let round = 0; round < rounds; round++) {
     for (let matchIndex = 0; matchIndex < matchesPerRound; matchIndex++) {
       let home: number, away: number;
@@ -422,7 +424,9 @@ function generateBasicRoundRobin(
         continue;
       }
       
-      const board = ((matchIndex + round) % boards) + 1;
+      // Use global counter to rotate boards across all rounds
+      const board = (globalMatchCounter % boards) + 1;
+      globalMatchCounter++;
       
       matches.push({
         round: round + 1,
